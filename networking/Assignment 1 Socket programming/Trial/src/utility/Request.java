@@ -1,6 +1,7 @@
 package utility;
+import java.io.Serializable;
 
-public class Request {
+public class Request implements Serializable{
     public static final String LIST_ALL_CLIENTS = "LIST_ALL_CLIENTS";
     public static final String LIST_ONLINE_CLIENTS = "LIST_ONLINE_CLIENTS";
     public static final String LIST_UPLOADED_FILES = "LIST_UPLOADED_FILES";
@@ -14,7 +15,7 @@ public class Request {
     public static final String LOG_OUT = "LOG_OUT";
 
     public String request;
-    public void Request(String req) {
+    public Request(String req) {
         this.request = req;
     }
 }

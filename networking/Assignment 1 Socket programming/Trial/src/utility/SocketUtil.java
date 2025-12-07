@@ -27,8 +27,9 @@ public class SocketUtil {
     }
 
     public void close_connection() throws IOException {
-        this.input.close();
-        this.output.close();
+        if (input != null) input.close();
+        if (output != null) output.close();
+        if (socket != null) socket.close();
     }
 
     public void setTimeout(int timeout) throws IOException {
@@ -36,11 +37,15 @@ public class SocketUtil {
     }
 
     public Object read() throws IOException, ClassNotFoundException {
-        return this.input.readObject();
+        return this.input.readUnshared();
     }
 
     public int read(byte[] buffer, int offset, int len) throws IOException {
         return this.input.read(buffer, offset, len);
+    }
+    public void write(Object obj) throws IOException {
+        output.writeUnshared(obj);
+        flush();
     }
 
     public void write(byte[] buffer, int offset, int len) throws IOException {

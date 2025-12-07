@@ -5,13 +5,13 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.List;
+import java.util.ArrayList;
 import java.io.Serializable;
 
 public class CustomList implements Serializable {
-    public List<String> items;
+    public ArrayList<String> items;
 
-    public CustomList(List<String> items) {
+    public CustomList(ArrayList<String> items) {
         this.items = items;
     }
 
@@ -40,5 +40,5 @@ public class CustomList implements Serializable {
         System.out.println();
     }
 
-    
+
 }

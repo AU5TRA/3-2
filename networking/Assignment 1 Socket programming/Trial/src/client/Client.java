@@ -6,6 +6,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.io.File;
 import java.util.Scanner;
+import java.util.ArrayList;
 
 import utility.*;
 
@@ -45,6 +46,7 @@ public class Client {
 
         socket.write(client_name);
         String reply = (String) socket.read();
+        System.out.println("Server: " + reply);
 
 
         System.out.println("Connection established");
@@ -53,6 +55,7 @@ public class Client {
 
 
         while(true){
+            System.out.println("---------------------------");  
             System.out.println("1. Show all clients");
             System.out.println("2. Show all online clients");
             System.out.println("3. Show my uploaded files");
@@ -70,8 +73,11 @@ public class Client {
 
             switch(choice){
                 case 1:
-                    socket.write(new Request(Request.LIST_ALL_CLIENTS));
+                    Request r = new Request(Request.LIST_ALL_CLIENTS);
+                    socket.write(r);
+                    System.out.println("Requesting list of all clients...");
                     Object all_clients = socket.read();
+                    System.out.println("Received list of all clients from server.");
                     if (all_clients instanceof CustomList) {
                         CustomList clientsList = (CustomList) all_clients;
                         clientsList.showUsers("All");
@@ -85,7 +91,7 @@ public class Client {
                         clientsList.showUsers("Online");
                     }
                     break;
-                    
+                
                 default:
                     System.out.println("Invalid choice. Please try again.");
         }
