@@ -5,38 +5,46 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-public class socketUtil {
-    private Socket socket;
-    private ObjectInputStream input;
-    private ObjectOutputStream output;
+public class SocketUtil {
+    public Socket socket;
+    public ObjectInputStream input;
+    public ObjectOutputStream output;
 
-    public socketUtil(String serverAddr, int port) throws IOException {
+    public SocketUtil(String serverAddr, int port) throws IOException {
         this.socket = new Socket(serverAddr, port);
-        input = new ObjectInputStream(socket.getInputStream());
-        output = new ObjectOutputStream(socket.getOutputStream());
+        this.output = new ObjectOutputStream(this.socket.getOutputStream());
+        this.output.flush();  
+        this.input = new ObjectInputStream(this.socket.getInputStream());
+        
     }
 
-    public socketUtil(Socket socket) throws IOException {
-        this.socket = socket;
-        input = new ObjectInputStream(socket.getInputStream());
-        output = new ObjectOutputStream(socket.getOutputStream());
+    public SocketUtil(Socket sckt) throws IOException {
+        this.socket = sckt;
+        this.output = new ObjectOutputStream(sckt.getOutputStream());
+        this.output.flush();
+        this.input = new ObjectInputStream(sckt.getInputStream());
+
     }
 
     public void close_connection() throws IOException {
-        input.close();
-        output.close();
+        this.input.close();
+        this.output.close();
     }
 
     public void setTimeout(int timeout) throws IOException {
         socket.setSoTimeout(timeout);
     }
 
+    public Object read() throws IOException, ClassNotFoundException {
+        return this.input.readObject();
+    }
+
     public int read(byte[] buffer, int offset, int len) throws IOException {
-        return output.read(buffer, offset, len);
+        return this.input.read(buffer, offset, len);
     }
 
     public void write(byte[] buffer, int offset, int len) throws IOException {
-        output.write(buffer, offet, len);
+        this.output.write(buffer, offset, len);
         flush();
     }
 
@@ -45,7 +53,7 @@ public class socketUtil {
     }
 
     public void flush() throws IOException {
-        output.flush();
+        this.output.flush();
     }
 }
 
