@@ -15,10 +15,9 @@ public class Worker extends Thread {
     private Server server;
 
 
-    public Worker(SocketUtil socket, String name, Server server)
+    public Worker(SocketUtil socket, Server server)
     {
         this.socket = socket;
-        this.client_name = name;
         this.server = server;
         this.thread = new Thread(this);
         this.thread.start();
@@ -26,6 +25,34 @@ public class Worker extends Thread {
 
     public void run()
     {
+        try {
+            // Do the handshake in the Worker thread
+            this.client_name = (String) socket.read();
+            
+            if(server.isClientOnline(client_name)){
+                System.out.println("Client " + client_name + " is already logged in!");
+                socket.write("ERROR: Already logged in from another session");
+                socket.close_connection();
+                return; 
+            }
+            
+            server.addOnlineClient(client_name, socket);
+            
+            if(server.isRegisteredClient(client_name)){
+                socket.write("Welcome back, " + client_name);
+                System.out.println(client_name + " has reconnected.");
+            }
+            else{
+                server.registerNewClient(client_name);
+                socket.write("Welcome, " + client_name);
+                System.out.println("New client " + client_name + " has joined.");
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error during client handshake");
+            return;
+        }
+
+        
         while(true){
             try{
             Object obj = socket.read();

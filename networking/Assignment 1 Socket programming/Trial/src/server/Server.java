@@ -47,37 +47,37 @@ public class Server {
             System.out.println("Remote port: " + socket.socket.getPort());
             System.out.println("Local port: " + socket.socket.getLocalPort());
             
-            String client_name = (String) socket.read();
+            // String client_name = (String) socket.read();
             
-            if(online_clients_map.containsKey(client_name)){
-                System.out.println("Client " + client_name + " is already logged in!");
-                socket.write("ERROR: Already logged in from another session");
-                socket.close_connection();
-                continue; 
-            }
-            else {
-                online_clients_map.put(client_name, socket);
-            }
+            // if(online_clients_map.containsKey(client_name)){
+            //     System.out.println("Client " + client_name + " is already logged in!");
+            //     socket.write("ERROR: Already logged in from another session");
+            //     socket.close_connection();
+            //     continue; 
+            // }
+            // else {
+            //     online_clients_map.put(client_name, socket);
+            // }
 
-            if(clients.contains(client_name)){
-                socket.write("Welcome back, " + client_name);
-                System.out.println(client_name + " has reconnected.");
-            }
-            else{
-                clients.add(client_name);
-                File file = new File("src/storage/" + client_name);
-                if(!file.exists()){
-                    file.mkdir();
-                    file = new File("src/storage/" + client_name + "/public");
-                    file.mkdir();
-                    file = new File("src/storage/" + client_name + "/private");
-                    file.mkdir();
-                    System.out.println("Created directory for new client: " + client_name);
-                }
-                socket.write("Welcome, " + client_name);
-                System.out.println("New client " + client_name + " has joined.");
-            }
-            new Worker(socket, client_name, this);
+            // if(clients.contains(client_name)){
+            //     socket.write("Welcome back, " + client_name);
+            //     System.out.println(client_name + " has reconnected.");
+            // }
+            // else{
+            //     clients.add(client_name);
+            //     File file = new File("src/storage/" + client_name);
+            //     if(!file.exists()){
+            //         file.mkdir();
+            //         file = new File("src/storage/" + client_name + "/public");
+            //         file.mkdir();
+            //         file = new File("src/storage/" + client_name + "/private");
+            //         file.mkdir();
+            //         System.out.println("Created directory for new client: " + client_name);
+            //     }
+            //     socket.write("Welcome, " + client_name);
+            //     System.out.println("New client " + client_name + " has joined.");
+            // }
+            new Worker(socket, this);
         }
     }
     public CustomList get_clients(String type) {
@@ -179,11 +179,12 @@ public class Server {
         System.out.println("Server side " + file_path);
         String[] parts = file_path.split("/", 2);
         String extracted_path = parts.length > 1 ? parts[1] : file_path;
-        file_path = parts[0] + "/public/" + extracted_path;
+        // file_path = parts[0] + "/public/" + extracted_path;
+        file_path = "/public/" + extracted_path;
 
-        String full_path = "src/storage/"  + file_path;
+        String full_path = "src/storage/"  + parts[0] + file_path;
         System.out.println("File extracted from: "  + full_path);
-        System.out.println("File exported to: " + full_path);
+        System.out.println("File exported to: " + file_path);
         File file = new File(full_path);
         if (!file.exists() || !file.isFile()) {
             try { socket.write("ERROR: File not found on server."); } catch (IOException ignored) {}
@@ -229,7 +230,31 @@ public class Server {
             messages.get(client_name).add(m);
         }
     }
+    public synchronized boolean isClientOnline(String client_name) {
+        return online_clients_map.containsKey(client_name);
+    }
     
+    public synchronized void addOnlineClient(String client_name, SocketUtil socket) {
+        online_clients_map.put(client_name, socket);
+    }
+    
+    public synchronized boolean isRegisteredClient(String client_name) {
+        return clients.contains(client_name);
+    }
+    
+    public synchronized void registerNewClient(String client_name) throws IOException {
+        clients.add(client_name);
+        messages.put(client_name, new ArrayList<>());
+        File file = new File("src/storage/" + client_name);
+        if(!file.exists()){
+            file.mkdir();
+            file = new File("src/storage/" + client_name + "/public");
+            file.mkdir();
+            file = new File("src/storage/" + client_name + "/private");
+            file.mkdir();
+            System.out.println("Created directory for new client: " + client_name);
+        }
+    }
     public String close_client_connection(String client_name) {
         online_clients_map.remove(client_name);
         System.out.println("Client " + client_name + " has been removed from online clients.");
