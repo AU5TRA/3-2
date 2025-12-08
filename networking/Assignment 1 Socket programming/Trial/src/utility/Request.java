@@ -9,7 +9,7 @@ public class Request implements Serializable{
     public static final String UPLOAD_FILE = "UPLOAD_FILE";
     public static final String LIST_PUBLIC_FILES = "LIST_PUBLIC_FILES";
     public static final String DOWNLOAD_PUBLIC_FILE = "DOWNLOAD_PUBLIC_FILE";
-    public static final String MAKE_FILE_REQUEST = "MAKE_FILE_REQUEST";
+    public static final String FILE_REQUEST = "FILE_REQUEST";
     public static final String VIEW_UNREAD_MESSAGES = "VIEW_UNREAD_MESSAGES";
     public static final String VIEW_HISTORY = "VIEW_HISTORY";
     public static final String LOG_OUT = "LOG_OUT";

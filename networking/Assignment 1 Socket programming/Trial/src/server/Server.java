@@ -21,14 +21,19 @@ public class Server {
     private ServerSocket server_socket;
     private SocketUtil socket;
     private HashSet<String> clients;
-    private List<String> files;  // Changed from CustomList to String
+    private List<String> files;
     private HashMap<String, SocketUtil> online_clients_map;
+    private List<FileRequest> file_request_list;
+    private HashMap<String, List<Message>> messages;
 
     public Server() throws IOException, ClassNotFoundException { 
         clients = new HashSet<String>();
         server_socket = new ServerSocket(6666);
         files = new ArrayList<String>();  
         online_clients_map = new HashMap<>();
+        messages = new HashMap<>();
+        file_request_list = new ArrayList<>();
+
 
         System.out.println("Server started on port 6666...");
 
@@ -127,7 +132,7 @@ public class Server {
         return new CustomList(public_files);
     }
 
-    // ...existing code...
+
 public String prepare_file_download(String client_name, SocketUtil socket, int fileNumber) {
     System.out.println("Preparing file download for file number " + fileNumber + " requested by " + client_name);
     CustomList uploaded_files = list_uploaded_files(client_name);
@@ -167,6 +172,24 @@ public String prepare_file_download(String client_name, SocketUtil socket, int f
         return "ERROR";
     }
 }
+
+    public String generate_request_ID() {
+        return String.valueOf(file_request_list.size() + 1);
+    }
+    public void make_file_request(FileRequest file_request) {
+        file_request_list.add(file_request);
+    }
+    public void request_to_all_users(FileRequest file_request) {
+        String description = file_request.requester + " has made a request (Request ID: " + file_request.requestID + ") with the description:\n" + file_request.description;
+        System.out.println("Spreading file request: " + description);
+        Message m = new Message(file_request.requester, "all", true, description);
+        for (String client_name : clients) { 
+            if (client_name.equals(file_request.requester)) // don't send to requester
+                continue;
+            messages.get(client_name).add(m);
+        }
+    }
+
     public String close_client_connection(String client_name) {
         online_clients_map.remove(client_name);
         System.out.println("Client " + client_name + " has been removed from online clients.");

@@ -143,6 +143,14 @@ public class Client {
                         filesList.showFiles(client_name, "all");
                     }
                     break;
+                case 8:
+                    scanner.nextLine(); // consume newline
+                    System.out.println("Enter description for the file request: ");
+                    String description = scanner.nextLine();
+                    FileRequest file_request = new FileRequest(client_name, description);
+                    socket.write(file_request);
+                    System.out.println("File request sent to server.");
+                    break;
                 case 11:
                     socket.write(new Request(Request.LOG_OUT));
                     running = false;
