@@ -35,13 +35,33 @@ public class Worker extends Thread {
 
             if (obj instanceof Request){
                 System.out.println("Processing request from " + client_name);
-                if(((Request)obj).request.equals(((Request)obj).LIST_ALL_CLIENTS)){
+                if(((Request)obj).request.equals(Request.LIST_ALL_CLIENTS)){
                     System.out.println("Show all clients request from " + client_name);
                     socket.write(server.get_clients("registered"));
                 }
-                else if(((Request)obj).request.equals(((Request)obj).LIST_ONLINE_CLIENTS)){
+                else if(((Request)obj).request.equals(Request.LIST_ONLINE_CLIENTS)){
                     System.out.println("Show online clients request from " + client_name);
                     socket.write(server.get_clients("online"));
+                }
+                else if(((Request)obj).request.equals(Request.LIST_UPLOADED_FILES)){
+                    System.out.println("Show uploaded files request from " + client_name);
+                    socket.write(server.list_uploaded_files(client_name));
+                }
+                else if(((Request)obj).request.equals(Request.LIST_PUBLIC_FILES)){
+                    System.out.println("Show public files request from " + client_name);
+                    socket.write(server.list_public_files());
+                }
+                else if(((Request)obj).request.equals(Request.DOWNLOAD_FILE)){
+                    System.out.println("Download file request from " + client_name);
+                    int fileNumber = (int) ((Request)obj).getData();
+                    server.prepare_file_download(client_name, socket, fileNumber);
+                    // socket.write(response);
+                    }
+                else if(((Request)obj).request.equals(Request.LOG_OUT)){
+                    System.out.println("Log out request from " + client_name);
+                    socket.write(server.close_client_connection(client_name));
+                    socket.close_connection();
+                    break;
                 }
             }
             } catch (IOException e) {

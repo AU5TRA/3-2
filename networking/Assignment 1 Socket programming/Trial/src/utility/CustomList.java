@@ -39,6 +39,29 @@ public class CustomList implements Serializable {
         }
         System.out.println();
     }
-
+    public void showFiles(String client_name, String type) {
+        
+        if(items.size() == 0){
+            if(type.equals("self")){
+                System.out.println("No uploaded files found for " + client_name);
+            }
+            else if(type.equals("all")){
+                System.out.println("No public files found");
+            }
+            return;
+        }
+        if(type.equals("self")){
+            System.out.println("Uploaded Files for " + client_name + ":");
+        }
+        else if(type.equals("all")){
+            System.out.println("Available public files:");
+        }
+        int i = 1;
+        for (String item : items) {
+            System.out.println(i+ ". " + item);
+            i++;
+        }
+        System.out.println();
+    }
 
 }

@@ -15,7 +15,26 @@ public class Request implements Serializable{
     public static final String LOG_OUT = "LOG_OUT";
 
     public String request;
+    private Object data;
+    private boolean is_accepted;
     public Request(String req) {
         this.request = req;
+        this.data = null;
+        this.is_accepted = false;
+    }
+    public Request(String req, Object data) {
+        this.request = req;
+        this.data = data;
+        this.is_accepted = false;
+    }
+    public Object getData() {
+        return data;
+    }
+    public void accept_request() {
+        this.is_accepted = true;
+    }
+
+    public boolean is_accepted() {
+        return is_accepted;
     }
 }
