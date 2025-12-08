@@ -1,5 +1,7 @@
 package server;
-
+// javac -d bin src/utility/*.java src/server/*.java src/client/*.java
+// java -cp bin server.Server
+// java -cp bin client.Client
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.io.File;
@@ -133,45 +135,83 @@ public class Server {
     }
 
 
-public String prepare_file_download(String client_name, SocketUtil socket, int fileNumber) {
-    System.out.println("Preparing file download for file number " + fileNumber + " requested by " + client_name);
-    CustomList uploaded_files = list_uploaded_files(client_name);
-    if (fileNumber < 1 || fileNumber > uploaded_files.items.size()) {
-        try { socket.write("ERROR: Invalid file number"); } catch (IOException ignored) {}
-        return "ERROR";
-    }
-    String file_path = uploaded_files.items.get(fileNumber - 1);
-    String full_path = "src/storage/" + client_name + "/" + file_path;
-
-    System.out.println("Full file path: " + full_path);
-    File file = new File(full_path);
-    if (!file.exists() || !file.isFile()) {
-        try { socket.write("ERROR: File not found on server."); } catch (IOException ignored) {}
-        return "ERROR";
-    }
-
-    try (FileInputStream fis = new FileInputStream(file)) {
-        long file_size = file.length();
-        String info = "FILE_INFO:" + file_path + ":" + file_size;
-        socket.write(info); // send file info first
-
-        byte[] buffer = new byte[4096];
-        long remaining = file_size;
-        while (remaining > 0) {
-            int read = fis.read(buffer, 0, (int) Math.min(buffer.length, remaining));
-            if (read == -1) break;
-            socket.write(buffer, 0, read); // stream bytes
-            remaining -= read;
+    public String prepare_file_download(String client_name, SocketUtil socket, int fileNumber) {
+        System.out.println("Preparing file download for file number " + fileNumber + " requested by " + client_name);
+        CustomList uploaded_files = list_uploaded_files(client_name);
+        if (fileNumber < 1 || fileNumber > uploaded_files.items.size()) {
+            try { socket.write("ERROR: Invalid file number"); } catch (IOException ignored) {}
+            return "ERROR";
         }
-        socket.write("done"); // final marker
-        System.out.println("File " + file_path + " sent to " + client_name);
-        return "OK";
-    } catch (IOException e) {
-        System.out.println("Error sending file: " + e.getMessage());
-        try { socket.write("ERROR: Failed to download file."); } catch (IOException ignored) {}
-        return "ERROR";
+        String file_path = uploaded_files.items.get(fileNumber - 1);
+        String full_path = "src/storage/" + client_name + "/" + file_path;
+
+        System.out.println("Full file path: " + full_path);
+        File file = new File(full_path);
+        if (!file.exists() || !file.isFile()) {
+            try { socket.write("ERROR: File not found on server."); } catch (IOException ignored) {}
+            return "ERROR";
+        }
+
+        try (FileInputStream fis = new FileInputStream(file)) {
+            long file_size = file.length();
+            String info = "FILE_INFO:" + file_path + ":" + file_size;
+            socket.write(info);
+
+            byte[] buffer = new byte[4096];
+            long remaining = file_size;
+            while (remaining > 0) {
+                int read = fis.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                if (read == -1) break;
+                socket.write(buffer, 0, read);
+                remaining -= read;
+            }
+            socket.write("done"); 
+            System.out.println("File " + file_path + " sent to " + client_name);
+            return "OK";
+        } catch (IOException e) {
+            System.out.println("Error sending file: " + e.getMessage());
+            try { socket.write("ERROR: Failed to download file."); } catch (IOException ignored) {}
+            return "ERROR";
+        }
     }
-}
+
+    public String prepare_file_download(String client_name, SocketUtil socket, String file_path){
+        System.out.println("Server side " + file_path);
+        String[] parts = file_path.split("/", 2);
+        String extracted_path = parts.length > 1 ? parts[1] : file_path;
+        file_path = parts[0] + "/public/" + extracted_path;
+
+        String full_path = "src/storage/"  + file_path;
+        System.out.println("File extracted from: "  + full_path);
+        System.out.println("File exported to: " + full_path);
+        File file = new File(full_path);
+        if (!file.exists() || !file.isFile()) {
+            try { socket.write("ERROR: File not found on server."); } catch (IOException ignored) {}
+            return "ERROR";
+        }
+
+        try (FileInputStream fis = new FileInputStream(file)) {
+            long file_size = file.length();
+            String info = "FILE_INFO:" + file_path + ":" + file_size;
+            socket.write(info);
+
+            byte[] buffer = new byte[4096];
+            long remaining = file_size;
+            while (remaining > 0) {
+                int read = fis.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                if (read == -1) break;
+                socket.write(buffer, 0, read);
+                remaining -= read;
+            }
+            socket.write("done"); 
+            System.out.println("File " + file_path + " sent to " + client_name);
+            return "OK";
+        } catch (IOException e) {
+            System.out.println("Error sending file: " + e.getMessage());
+            try { socket.write("ERROR: Failed to download file."); } catch (IOException ignored) {}
+            return "ERROR";
+        }
+    }
 
     public String generate_request_ID() {
         return String.valueOf(file_request_list.size() + 1);
@@ -189,7 +229,7 @@ public String prepare_file_download(String client_name, SocketUtil socket, int f
             messages.get(client_name).add(m);
         }
     }
-
+    
     public String close_client_connection(String client_name) {
         online_clients_map.remove(client_name);
         System.out.println("Client " + client_name + " has been removed from online clients.");

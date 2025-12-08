@@ -24,7 +24,9 @@ public class CustomList implements Serializable {
         }
         System.out.println();
     }
-
+    public String retrieve(int index){
+        return items.get(index);
+    }
     public void showMessages(String file_type) {
         
         if(items.size() == 0){

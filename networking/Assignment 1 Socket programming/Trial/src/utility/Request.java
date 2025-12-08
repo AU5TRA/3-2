@@ -16,25 +16,25 @@ public class Request implements Serializable{
 
     public String request;
     private Object data;
-    private boolean is_accepted;
+    private boolean accepted;
     public Request(String req) {
         this.request = req;
         this.data = null;
-        this.is_accepted = false;
+        this.accepted = false;
     }
     public Request(String req, Object data) {
         this.request = req;
         this.data = data;
-        this.is_accepted = false;
+        this.accepted = false;
     }
     public Object getData() {
         return data;
     }
     public void accept_request() {
-        this.is_accepted = true;
+        this.accepted = true;
     }
 
     public boolean is_accepted() {
-        return is_accepted;
+        return accepted;
     }
 }

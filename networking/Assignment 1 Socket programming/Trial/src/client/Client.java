@@ -59,17 +59,17 @@ public class Client {
 
         while(running){
             System.out.println("---------------------------");  
-            System.out.println("1. Show all clients");
-            System.out.println("2. Show all online clients");
-            System.out.println("3. Show my uploaded files");
-            System.out.println("4. Download my file");
+            System.out.println("1. Show all clients"); // done
+            System.out.println("2. Show all online clients"); // done
+            System.out.println("3. Show my uploaded files"); // done
+            System.out.println("4. Download my file");// done
             System.out.println("5. Upload a file");
-            System.out.println("6. Show public files of other clients");
-            System.out.println("7. Download public files of other clients");
-            System.out.println("8. Make a file request");
+            System.out.println("6. Show public files of other clients"); // done
+            System.out.println("7. Download public files of other clients"); //  done
+            System.out.println("8. Make a file request"); // done
             System.out.println("9. View Unread messages");
             System.out.println("10. View upload and download history");
-            System.out.println("11. Log Out");
+            System.out.println("11. Log Out"); // done
             System.out.println("Enter your choice: ");
 
             int choice = scanner.nextInt();
@@ -143,6 +143,40 @@ public class Client {
                         filesList.showFiles(client_name, "all");
                     }
                     break;
+                case 7:
+                    socket.write(new Request(Request.LIST_PUBLIC_FILES));
+                    public_files = socket.read();
+                    filesList = null;
+                    if (public_files instanceof CustomList){
+                        filesList = (CustomList) public_files;
+                        filesList.showFiles(client_name, "all");
+                    }
+                    if(filesList != null && filesList.items.size()>0){
+                        System.out.println("Enter the number of the public file to download: ");
+                        int file_choice = scanner.nextInt();
+                        String chosen_file_name= filesList.retrieve(file_choice-1);
+                        socket.write(new Request(Request.DOWNLOAD_PUBLIC_FILE, chosen_file_name));
+                        Object response = socket.read();
+                        if (response instanceof String) {
+                            String file_info = (String) response;
+                            String[] parts = file_info.split(":");
+                            if (parts.length == 3 && parts[0].equals("FILE_INFO")) {
+                                String file_name = parts[1];
+                                long file_size = Long.parseLong(parts[2]);
+                                System.out.println("Downloading file: " + file_name + " of size " + file_size + " bytes.");
+                                download_file(file_name, 4096, file_size);
+                            } else {
+                                System.out.println("Invalid file info received from server.");
+                            }
+                        } else {
+                            System.out.println("Invalid response from server.");
+                        }
+                    }
+                    else{
+                        System.out.println("No files available to download.");
+                    }
+                    break;
+                    
                 case 8:
                     scanner.nextLine(); // consume newline
                     System.out.println("Enter description for the file request: ");

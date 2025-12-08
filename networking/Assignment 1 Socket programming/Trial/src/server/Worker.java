@@ -56,6 +56,10 @@ public class Worker extends Thread {
                     server.prepare_file_download(client_name, socket, fileNumber);
                     // socket.write(response);
                     }
+                else if(((Request)obj).request.equals(Request.DOWNLOAD_PUBLIC_FILE)){
+                    String file_name = (String)((Request)obj).getData();
+                    server.prepare_file_download(client_name, socket, file_name);
+                }
                 else if (((Request)obj).request.equals(Request.FILE_REQUEST)){
                     FileRequest file_request = (FileRequest) obj;
                     file_request.requestID = server.generate_request_ID();
