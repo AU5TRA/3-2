@@ -26,7 +26,6 @@ public class Worker extends Thread {
     public void run()
     {
         try {
-            // Do the handshake in the Worker thread
             this.client_name = (String) socket.read();
             
             if(server.isClientOnline(client_name)){
@@ -52,12 +51,10 @@ public class Worker extends Thread {
             return;
         }
 
-        
+
         while(true){
             try{
             Object obj = socket.read();
-            System.out.println("Received object from " + client_name);
-            System.out.println(obj.getClass().getName());
 
             if (obj instanceof Request){
                 System.out.println("Processing request from " + client_name);
@@ -93,6 +90,17 @@ public class Worker extends Thread {
                     System.out.println(client_name + " requested a file, request ID: " + file_request.requestID);
                     server.make_file_request(file_request);
                     server.request_to_all_users(file_request);
+                }
+                // else if(((Request)obj).request.equals(Request.UPLOAD_FILE)){
+                //     System.out.println("Upload file request from " + client_name);
+                //     String file_path = (String) ((Request)obj).getData();
+                //     server.receive_file_upload(client_name, socket, file_path);
+                // }
+                else if(((Request)obj).request.equals(Request.UPLOAD_FILE)){
+                    System.out.println("Upload file request from " + client_name);
+                    String metadata = (String) ((Request)obj).getData();
+                    String result = server.receive_file_upload(client_name, socket, metadata);
+                    System.out.println("Upload result: " + result);
                 }
                 else if(((Request)obj).request.equals(Request.LOG_OUT)){
                     System.out.println("Log out request from " + client_name);

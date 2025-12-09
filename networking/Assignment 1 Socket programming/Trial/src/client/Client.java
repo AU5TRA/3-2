@@ -41,6 +41,49 @@ public class Client {
         
     }
 
+        private static void upload_file_chunked(File file, long file_size) throws IOException, ClassNotFoundException{
+        int chunk_size = 4096;
+        long uploaded = 0;
+        
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] buffer = new byte[chunk_size];
+            int read_bytes;
+            
+            while ((read_bytes = fis.read(buffer)) != -1) {
+                socket.write(buffer, 0, read_bytes);
+                uploaded += read_bytes;
+                
+                double progress = (double) uploaded / file_size * 100;
+                int bar_length = 50;
+                int filled = (int) (bar_length * uploaded / file_size);
+                
+                System.out.print("\rUpload progress: [");
+                for (int i = 0; i < bar_length; i++) {
+                    if (i < filled) System.out.print("=");
+                    else System.out.print(" ");
+                }
+                System.out.printf("] %.1f%% (%d/%d bytes)", progress, uploaded, file_size);
+            }
+            
+            System.out.println(); 
+            
+            socket.write("<EOF>");
+            System.out.println("File data sent. Waiting for server confirmation...");
+            
+            Object confirmation = socket.read();
+            if (confirmation instanceof String) {
+                String msg = (String) confirmation;
+                if (msg.equals("UPLOAD_SUCCESS")) {
+                    System.out.println("File uploaded successfully!");
+                } else {
+                    System.out.println("Server response: " + msg);
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Error uploading file: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         String server_address = "localhost";
@@ -135,6 +178,70 @@ public class Client {
                         System.out.println("No files available to download.");
                     }
                 break;
+                                case 5:
+                    System.out.println("Is this a requested file? [y/n]: ");
+                    char is_requested = scanner.next().charAt(0);
+                    scanner.nextLine();
+                    
+                    if(is_requested == 'y' || is_requested == 'Y'){
+                        System.out.println("Enter the request ID: ");
+                        String request_id = scanner.nextLine();
+                        System.out.println("Enter the file name to upload (place the file in src/client/to_upload/): ");
+                        String file_name = scanner.nextLine();
+                        File file_to_upload = new File("src/client/to_upload/" + file_name);
+                        
+                        if(!file_to_upload.exists() || !file_to_upload.isFile()){
+                            System.out.println("File not found in src/client/to_upload/");
+                            break;
+                        }
+                        
+                        long file_size = file_to_upload.length();
+                        System.out.println("File size: " + file_size + " bytes");
+                        
+                        socket.write(new Request(Request.UPLOAD_FILE, "REQUESTED:" + request_id + ":" + file_name + ":" + file_size));
+                        
+                        Object server_response = socket.read();
+                        if(server_response instanceof String){
+                            String response = (String) server_response;
+                            if(response.equals("READY_TO_RECEIVE")){
+                                System.out.println("Server ready. Starting file upload...");
+                                upload_file_chunked(file_to_upload, file_size);
+                            }
+                            else{
+                                System.out.println("Server response: " + response);
+                            }
+                        }
+                    }
+                    else{
+                        System.out.println("Enter file name to upload (place the file in src/client/to_upload/): ");
+                        String file_name = scanner.nextLine();
+                        File file_to_upload = new File("src/client/to_upload/" + file_name);
+                        
+                        if(!file_to_upload.exists() || !file_to_upload.isFile()){
+                            System.out.println("File not found in src/client/to_upload/");
+                            break;
+                        }
+                        
+                        long file_size = file_to_upload.length();
+                        System.out.println("Is this file public? [y/n]: ");
+                        char is_public = scanner.next().charAt(0);
+                        String visibility = (is_public == 'y' || is_public == 'Y') ? "public" : "private";
+                        
+                        socket.write(new Request(Request.UPLOAD_FILE, visibility + ":" + file_name + ":" + file_size));
+                        
+                        Object server_response = socket.read();
+                        if(server_response instanceof String){
+                            String response = (String) server_response;
+                            if(response.equals("READY_TO_RECEIVE")){
+                                System.out.println("Server ready. Starting file upload...");
+                                upload_file_chunked(file_to_upload, file_size);
+                            }
+                            else{
+                                System.out.println("Server response: " + response);
+                            }
+                        }
+                    }
+                    break;
                 case 6:
                     socket.write(new Request(Request.LIST_PUBLIC_FILES));
                     Object public_files = socket.read();
@@ -200,14 +307,12 @@ public class Client {
         String dirPath = "src/client/downloads/";
         File file = new File(dirPath + file_name);
 
-        // Extract the directory part
         File parentDir = file.getParentFile();
 
         if (parentDir != null && !parentDir.exists()) {
-            parentDir.mkdirs();  // create all missing directories
+            parentDir.mkdirs();  
         }
 
-        // Now you can safely create the file output stream
         FileOutputStream fos = new FileOutputStream(file);
 
         try {

@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 
 
 public class Server {
@@ -259,6 +260,72 @@ public class Server {
         online_clients_map.remove(client_name);
         System.out.println("Client " + client_name + " has been removed from online clients.");
         return "Connection closed for " + client_name;
+    }
+    
+        public String receive_file_upload(String client_name, SocketUtil sck, String metadata) {
+        System.out.println("Receiving file upload from " + client_name + " with metadata: " + metadata);
+        String[] parts = metadata.split(":");
+        
+        String filename;
+        String upload_dir;
+        
+        if (parts[0].equals("REQUESTED")) {
+            // REQUESTED:request_id:filename:filesize
+            filename = parts[2];
+            upload_dir = "src/storage/" + client_name + "/public";
+        } else {
+            // public/private:filename:filesize
+            filename = parts[1];
+            upload_dir = "src/storage/" + client_name + "/" + parts[0];
+        }
+        
+        System.out.println("Upload directory: " + upload_dir);
+        File dir = new File(upload_dir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        String full_path = upload_dir + "/" + filename;
+        System.out.println("Full file path for upload: " + full_path);
+        
+        try {
+            sck.write("READY_TO_RECEIVE");
+            System.out.println("Notified client to send file data...");
+            
+            // Receive file in chunks
+            FileOutputStream fos = new FileOutputStream(full_path);
+            byte[] buffer = new byte[4096];
+            int read_bytes;
+            long total_received = 0;
+            
+            while ((read_bytes = sck.read(buffer, 0, buffer.length)) > 0) {
+                // Check if we received the terminator
+                String chunk = new String(buffer, 0, read_bytes);
+                if (chunk.contains("<EOF>")) {
+                    int terminator_index = chunk.indexOf("<EOF>");
+                    if (terminator_index > 0) {
+                        fos.write(buffer, 0, terminator_index);
+                        total_received += terminator_index;
+                    }
+                    break;
+                }
+                
+                fos.write(buffer, 0, read_bytes);
+                total_received += read_bytes;
+                System.out.println("Received " + total_received + " bytes...");
+            }
+            
+            fos.close();
+            System.out.println("File " + filename + " uploaded successfully. Total: " + total_received + " bytes");
+            sck.write("UPLOAD_SUCCESS");
+            return "OK";
+            
+        } catch (IOException e) {
+            System.out.println("Error receiving file upload: " + e.getMessage());
+            e.printStackTrace();
+            try { sck.write("UPLOAD_FAILED"); } catch (IOException ignored) {}
+            return "ERROR: Failed to upload file.";
+        }
     }
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         Server server = new Server();
