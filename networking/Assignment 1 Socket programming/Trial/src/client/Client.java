@@ -41,22 +41,30 @@ public class Client {
         
     }
 
-        private static void upload_file_chunked(File file, long file_size) throws IOException, ClassNotFoundException{
-        int chunk_size = 4096;
+     private static void upload_file_chunked(File file, long file_size, int chunk_size, String fileID) throws IOException, ClassNotFoundException{
         long uploaded = 0;
-        
+        int seq = 0;
         try (FileInputStream fis = new FileInputStream(file)) {
             byte[] buffer = new byte[chunk_size];
             int read_bytes;
-            
-            while ((read_bytes = fis.read(buffer)) != -1) {
+            while ((read_bytes = fis.read(buffer, 0, buffer.length)) != -1) {
+                seq++;
                 socket.write(buffer, 0, read_bytes);
+                // wait for ack
+                Object ackObj = socket.read();
+                if (!(ackObj instanceof String)) {
+                    System.out.println("Invalid ACK from server");
+                    return;
+                }
+                String ack = (String) ackObj;
+                if (!ack.startsWith("ACK:" + fileID + ":")) {
+                    System.out.println("Unexpected ACK: " + ack);
+                    return;
+                }
                 uploaded += read_bytes;
-                
                 double progress = (double) uploaded / file_size * 100;
                 int bar_length = 50;
                 int filled = (int) (bar_length * uploaded / file_size);
-                
                 System.out.print("\rUpload progress: [");
                 for (int i = 0; i < bar_length; i++) {
                     if (i < filled) System.out.print("=");
@@ -64,12 +72,9 @@ public class Client {
                 }
                 System.out.printf("] %.1f%% (%d/%d bytes)", progress, uploaded, file_size);
             }
-            
-            System.out.println(); 
-            
-            socket.write("<EOF>");
-            System.out.println("File data sent. Waiting for server confirmation...");
-            
+            System.out.println();
+            // send completion message with fileID
+            socket.write("COMPLETED:" + fileID);
             Object confirmation = socket.read();
             if (confirmation instanceof String) {
                 String msg = (String) confirmation;
@@ -82,7 +87,7 @@ public class Client {
         } catch (IOException e) {
             System.out.println("Error uploading file: " + e.getMessage());
             e.printStackTrace();
-        }
+       }
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
@@ -178,14 +183,14 @@ public class Client {
                         System.out.println("No files available to download.");
                     }
                 break;
-                                case 5:
+                case 5:
                     System.out.println("Is this a requested file? [y/n]: ");
                     char is_requested = scanner.next().charAt(0);
                     scanner.nextLine();
-                    
+                    String request_id = "";
                     if(is_requested == 'y' || is_requested == 'Y'){
                         System.out.println("Enter the request ID: ");
-                        String request_id = scanner.nextLine();
+                        request_id = scanner.nextLine();
                         System.out.println("Enter the file name to upload (place the file in src/client/to_upload/): ");
                         String file_name = scanner.nextLine();
                         File file_to_upload = new File("src/client/to_upload/" + file_name);
@@ -199,15 +204,16 @@ public class Client {
                         System.out.println("File size: " + file_size + " bytes");
                         
                         socket.write(new Request(Request.UPLOAD_FILE, "REQUESTED:" + request_id + ":" + file_name + ":" + file_size));
-                        
                         Object server_response = socket.read();
-                        if(server_response instanceof String){
+                        if (server_response instanceof String) {
                             String response = (String) server_response;
-                            if(response.equals("READY_TO_RECEIVE")){
-                                System.out.println("Server ready. Starting file upload...");
-                                upload_file_chunked(file_to_upload, file_size);
-                            }
-                            else{
+                            if (response.startsWith("READY:")) {
+                                String[] parts = response.split(":");
+                                int chunkSize = Integer.parseInt(parts[1]);
+                                String fileID = parts[2];
+                                System.out.println("Server ready. chunkSize=" + chunkSize + " fileID=" + fileID);
+                                upload_file_chunked(file_to_upload, file_size, chunkSize, fileID);
+                            } else {
                                 System.out.println("Server response: " + response);
                             }
                         }
@@ -225,18 +231,20 @@ public class Client {
                         long file_size = file_to_upload.length();
                         System.out.println("Is this file public? [y/n]: ");
                         char is_public = scanner.next().charAt(0);
+                        System.out.println(is_public);
                         String visibility = (is_public == 'y' || is_public == 'Y') ? "public" : "private";
                         
-                        socket.write(new Request(Request.UPLOAD_FILE, visibility + ":" + file_name + ":" + file_size));
-                        
+                        socket.write(new Request(Request.UPLOAD_FILE, "REQUESTED:" + request_id + ":" + file_name + ":" + file_size));
                         Object server_response = socket.read();
-                        if(server_response instanceof String){
+                        if (server_response instanceof String) {
                             String response = (String) server_response;
-                            if(response.equals("READY_TO_RECEIVE")){
-                                System.out.println("Server ready. Starting file upload...");
-                                upload_file_chunked(file_to_upload, file_size);
-                            }
-                            else{
+                            if (response.startsWith("READY:")) {
+                                String[] parts = response.split(":");
+                                int chunkSize = Integer.parseInt(parts[1]);
+                                String fileID = parts[2];
+                                System.out.println("Server ready. chunkSize=" + chunkSize + " fileID=" + fileID);
+                                upload_file_chunked(file_to_upload, file_size, chunkSize, fileID);
+                            } else {
                                 System.out.println("Server response: " + response);
                             }
                         }

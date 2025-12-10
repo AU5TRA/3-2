@@ -91,11 +91,7 @@ public class Worker extends Thread {
                     server.make_file_request(file_request);
                     server.request_to_all_users(file_request);
                 }
-                // else if(((Request)obj).request.equals(Request.UPLOAD_FILE)){
-                //     System.out.println("Upload file request from " + client_name);
-                //     String file_path = (String) ((Request)obj).getData();
-                //     server.receive_file_upload(client_name, socket, file_path);
-                // }
+                \
                 else if(((Request)obj).request.equals(Request.UPLOAD_FILE)){
                     System.out.println("Upload file request from " + client_name);
                     String metadata = (String) ((Request)obj).getData();
@@ -115,7 +111,7 @@ public class Worker extends Thread {
                     socket.write(server.close_client_connection(client_name));
                     socket.close_connection();
                 } catch (IOException ex) {
-                    System.out.println("Error closing connection for " + client_name);
+                    // System.out.println("Error closing connection for " + client_name);
                 }
                 break;
             } catch (ClassNotFoundException e) {

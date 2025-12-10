@@ -17,9 +17,8 @@ import java.io.FileOutputStream;
 
 
 public class Server {
-    private static int MAX_BUFFER_SIZE;
-    private static int MIN_CHUNK_SIZE;
-    private static int MAX_CHUNK_SIZE;
+    public int MIN_CHUNK_SIZE, MAX_CHUNK_SIZE;
+    public long CUR_BUFFER_SIZE, MAX_BUFFER_SIZE;
 
     private ServerSocket server_socket;
     private SocketUtil socket;
@@ -28,8 +27,17 @@ public class Server {
     private HashMap<String, SocketUtil> online_clients_map;
     private List<FileRequest> file_request_list;
     private HashMap<String, List<Message>> messages;
+    private HashMap<String, UploadSession> uploadSessions;
 
     public Server() throws IOException, ClassNotFoundException { 
+        this.CUR_BUFFER_SIZE = 0;
+        this.MAX_BUFFER_SIZE = 250 * 1024; // default 250 KB
+        this.MIN_CHUNK_SIZE = 1024; // 1 KB
+        this.MAX_CHUNK_SIZE = 8 * 1024; // 8 KB
+        this.uploadSessions = new HashMap<>();
+
+
+
         clients = new HashSet<String>();
         server_socket = new ServerSocket(6666);
         files = new ArrayList<String>();  
@@ -45,50 +53,18 @@ public class Server {
             socket = new SocketUtil(server_socket.accept());
             
             System.out.println("Connection established");
-            System.out.println("Remote port: " + socket.socket.getPort());
-            System.out.println("Local port: " + socket.socket.getLocalPort());
+            // System.out.println("Remote port: " + socket.socket.getPort());
+            // System.out.println("Local port: " + socket.socket.getLocalPort());
             
-            // String client_name = (String) socket.read();
-            
-            // if(online_clients_map.containsKey(client_name)){
-            //     System.out.println("Client " + client_name + " is already logged in!");
-            //     socket.write("ERROR: Already logged in from another session");
-            //     socket.close_connection();
-            //     continue; 
-            // }
-            // else {
-            //     online_clients_map.put(client_name, socket);
-            // }
-
-            // if(clients.contains(client_name)){
-            //     socket.write("Welcome back, " + client_name);
-            //     System.out.println(client_name + " has reconnected.");
-            // }
-            // else{
-            //     clients.add(client_name);
-            //     File file = new File("src/storage/" + client_name);
-            //     if(!file.exists()){
-            //         file.mkdir();
-            //         file = new File("src/storage/" + client_name + "/public");
-            //         file.mkdir();
-            //         file = new File("src/storage/" + client_name + "/private");
-            //         file.mkdir();
-            //         System.out.println("Created directory for new client: " + client_name);
-            //     }
-            //     socket.write("Welcome, " + client_name);
-            //     System.out.println("New client " + client_name + " has joined.");
-            // }
             new Worker(socket, this);
         }
     }
     public CustomList get_clients(String type) {
         if (type.equals("registered")) {
-            System.out.println("Preparing list of all registered clients.");
+            // System.out.println("Preparing list of all registered clients.");
             return new CustomList(new ArrayList<>(clients));
         } else if (type.equals("online")) {
-            System.out.println("Preparing list of all online clients.");
-
-            System.out.println("Online clients map: " + online_clients_map.keySet());
+            // System.out.println("Preparing list of all online clients.");
             return new CustomList(new ArrayList<>(online_clients_map.keySet()));
         } else {
             return null;
@@ -96,7 +72,7 @@ public class Server {
     }
 
     public CustomList list_uploaded_files(String client_name) {
-        System.out.println("Preparing list of uploaded files for " + client_name);
+        // System.out.println("Preparing list of uploaded files for " + client_name);
         String dir_name = "src/storage/" + client_name;
         File client_dir = new File(dir_name + "/public");
 
@@ -140,7 +116,7 @@ public class Server {
         System.out.println("Preparing file download for file number " + fileNumber + " requested by " + client_name);
         CustomList uploaded_files = list_uploaded_files(client_name);
         if (fileNumber < 1 || fileNumber > uploaded_files.items.size()) {
-            try { socket.write("ERROR: Invalid file number"); } catch (IOException ignored) {}
+            try { socket.write(Color.RED+ "ERROR" + Color.RESET + ": Invalid file number"); } catch (IOException ignored) {}
             return "ERROR";
         }
         String file_path = uploaded_files.items.get(fileNumber - 1);
@@ -149,7 +125,7 @@ public class Server {
         System.out.println("Full file path: " + full_path);
         File file = new File(full_path);
         if (!file.exists() || !file.isFile()) {
-            try { socket.write("ERROR: File not found on server."); } catch (IOException ignored) {}
+            try { socket.write(Color.RED+ "ERROR" + Color.RESET + ": File not found on server."); } catch (IOException ignored) {}
             return "ERROR";
         }
 
@@ -171,7 +147,7 @@ public class Server {
             return "OK";
         } catch (IOException e) {
             System.out.println("Error sending file: " + e.getMessage());
-            try { socket.write("ERROR: Failed to download file."); } catch (IOException ignored) {}
+            try { socket.write(Color.RED+ "ERROR" + Color.RESET + ": Failed to download file."); } catch (IOException ignored) {}
             return "ERROR";
         }
     }
@@ -188,7 +164,7 @@ public class Server {
         System.out.println("File exported to: " + file_path);
         File file = new File(full_path);
         if (!file.exists() || !file.isFile()) {
-            try { socket.write("ERROR: File not found on server."); } catch (IOException ignored) {}
+            try { socket.write(Color.RED+ "ERROR" + Color.RESET + ": File not found on server."); } catch (IOException ignored) {}
             return "ERROR";
         }
 
@@ -210,7 +186,7 @@ public class Server {
             return "OK";
         } catch (IOException e) {
             System.out.println("Error sending file: " + e.getMessage());
-            try { socket.write("ERROR: Failed to download file."); } catch (IOException ignored) {}
+            try { socket.write(Color.RED+ "ERROR" + Color.RESET + ": Failed to download file."); } catch (IOException ignored) {}
             return "ERROR";
         }
     }
@@ -256,77 +232,142 @@ public class Server {
             System.out.println("Created directory for new client: " + client_name);
         }
     }
+
+    private synchronized void discardIncompleteUploadsForClient(String client_name) {
+        List<String> toRemove = new ArrayList<>();
+        for (UploadSession s : uploadSessions.values()) {
+            if (s.uploader.equals(client_name)) {
+                try {
+                    if (s.tempFile != null && s.tempFile.exists()) s.tempFile.delete();
+                } catch (Exception ignored) {}
+                CUR_BUFFER_SIZE -= s.expectedSize;
+                toRemove.add(s.fileID);
+                System.out.println("Discarded incomplete upload " + s.fileID + " from " + client_name);
+            }
+        }
+        for (String fid : toRemove) uploadSessions.remove(fid);
+    }
+
     public String close_client_connection(String client_name) {
+        discardIncompleteUploadsForClient(client_name);
         online_clients_map.remove(client_name);
         System.out.println("Client " + client_name + " has been removed from online clients.");
         return "Connection closed for " + client_name;
     }
     
         public String receive_file_upload(String client_name, SocketUtil sck, String metadata) {
-        System.out.println("Receiving file upload from " + client_name + " with metadata: " + metadata);
+        System.out.println("Receiving file upload (negotiation) from " + client_name + " metadata: " + metadata);
         String[] parts = metadata.split(":");
-        
         String filename;
         String upload_dir;
-        
+        long file_size;
+
         if (parts[0].equals("REQUESTED")) {
             // REQUESTED:request_id:filename:filesize
             filename = parts[2];
+            file_size = Long.parseLong(parts[3]);
             upload_dir = "src/storage/" + client_name + "/public";
         } else {
             // public/private:filename:filesize
             filename = parts[1];
+            file_size = Long.parseLong(parts[2]);
             upload_dir = "src/storage/" + client_name + "/" + parts[0];
         }
-        
-        System.out.println("Upload directory: " + upload_dir);
+
         File dir = new File(upload_dir);
-        if (!dir.exists()) {
-            dir.mkdirs();
+        if (!dir.exists()) dir.mkdirs();
+        
+        synchronized (this) {
+            if (CUR_BUFFER_SIZE + file_size > MAX_BUFFER_SIZE) {
+                try { sck.write("REJECT:BUFFER_FULL"); } catch (IOException ignored) {}
+                System.out.println("Rejected upload from " + client_name + " because buffer full");
+                return "ERROR: BUFFER_FULL";
+            }
+            CUR_BUFFER_SIZE += file_size;
         }
 
-        String full_path = upload_dir + "/" + filename;
-        System.out.println("Full file path for upload: " + full_path);
-        
+        String fileID = "F" + System.currentTimeMillis() + "_" + (uploadSessions.size() + 1);
+        int negotiatedChunk = Math.min((int) Math.min(MAX_CHUNK_SIZE, file_size), Math.max(MIN_CHUNK_SIZE, (int)(Math.random() * (MAX_CHUNK_SIZE - MIN_CHUNK_SIZE + 1) + MIN_CHUNK_SIZE)));
+
+        File tempFile = new File(upload_dir + "/.upload_" + fileID + ".tmp");
+        UploadSession session = new UploadSession();
+        session.fileID = fileID;
+        session.uploader = client_name;
+        session.filename = filename;
+        session.expectedSize = file_size;
+        session.receivedSize = 0;
+        session.tempFile = tempFile;
+        session.chunkSize = negotiatedChunk;
+        uploadSessions.put(fileID, session);
+        /////////////////
         try {
-            sck.write("READY_TO_RECEIVE");
-            System.out.println("Notified client to send file data...");
-            
-            // Receive file in chunks
-            FileOutputStream fos = new FileOutputStream(full_path);
-            byte[] buffer = new byte[4096];
-            int read_bytes;
-            long total_received = 0;
-            
-            while ((read_bytes = sck.read(buffer, 0, buffer.length)) > 0) {
-                // Check if we received the terminator
-                String chunk = new String(buffer, 0, read_bytes);
-                if (chunk.contains("<EOF>")) {
-                    int terminator_index = chunk.indexOf("<EOF>");
-                    if (terminator_index > 0) {
-                        fos.write(buffer, 0, terminator_index);
-                        total_received += terminator_index;
-                    }
-                    break;
+            // tell client to start with chunk size and fileID
+            sck.write("READY:" + negotiatedChunk + ":" + fileID);
+            System.out.println("Negotiated chunk=" + negotiatedChunk + " fileID=" + fileID + " for " + client_name);
+
+            FileOutputStream fos = new FileOutputStream(tempFile);
+            byte[] buffer = new byte[negotiatedChunk];
+            int seq = 0;
+
+            while (session.receivedSize < session.expectedSize) {
+                seq++;
+                int toRead = (int) Math.min(buffer.length, session.expectedSize - session.receivedSize);
+                int got = sck.read(buffer, 0, toRead);
+                if (got <= 0) {
+                    throw new IOException("Client disconnected while uploading");
                 }
-                
-                fos.write(buffer, 0, read_bytes);
-                total_received += read_bytes;
-                System.out.println("Received " + total_received + " bytes...");
+                fos.write(buffer, 0, got);
+                session.receivedSize += got;
+
+                // send ack for this chunk
+                try { sck.write("ACK:" + fileID + ":" + seq + ":" + got); } catch (IOException ignored) {}
             }
-            
             fos.close();
-            System.out.println("File " + filename + " uploaded successfully. Total: " + total_received + " bytes");
-            sck.write("UPLOAD_SUCCESS");
-            return "OK";
-            
-        } catch (IOException e) {
-            System.out.println("Error receiving file upload: " + e.getMessage());
-            e.printStackTrace();
+
+            // optionally read a completion confirmation from client
+            Object finalMsgObj = sck.read();
+            String finalMsg = finalMsgObj instanceof String ? (String) finalMsgObj : "";
+
+            // verify sizes
+            if (session.receivedSize == session.expectedSize && finalMsg.equals("COMPLETED:" + fileID)) {
+                // move temp file to final name
+                File finalFile = new File(upload_dir + "/" + filename);
+                if (finalFile.exists()) finalFile.delete();
+                tempFile.renameTo(finalFile);
+                synchronized (this) {
+                    CUR_BUFFER_SIZE -= session.expectedSize; // free reserved space
+                }
+                uploadSessions.remove(fileID);
+                sck.write("UPLOAD_SUCCESS");
+                System.out.println("Upload success " + filename + " from " + client_name);
+                return "OK";
+            } else {
+                // mismatch or missing completion message
+                fos.close();
+                if (tempFile.exists()) tempFile.delete();
+                synchronized (this) {
+                    CUR_BUFFER_SIZE -= session.expectedSize;
+                }
+                uploadSessions.remove(fileID);
+                sck.write(Color.RED + "UPLOAD_FAILED" + Color.RESET);
+                System.out.println("Upload failed (size mismatch or bad completion) for " + fileID);
+                return "ERROR: UPLOAD_FAILED";
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error during upload: " + e.getMessage());
+            // cleanup
+            try {
+                if (session.tempFile != null && session.tempFile.exists()) session.tempFile.delete();
+            } catch (Exception ignored) {}
+            synchronized (this) {
+                CUR_BUFFER_SIZE -= session.expectedSize;
+            }
+            uploadSessions.remove(fileID);
             try { sck.write("UPLOAD_FAILED"); } catch (IOException ignored) {}
-            return "ERROR: Failed to upload file.";
+            return "ERROR: " + e.getMessage();
         }
     }
+
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         Server server = new Server();
     }
