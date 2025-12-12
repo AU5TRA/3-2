@@ -27,25 +27,41 @@ public class Worker extends Thread {
     {
         try {
             this.client_name = (String) socket.read();
+            // instead of using several functions
+            // if(server.isClientOnline(client_name)){
+            //     System.out.println("Client " + client_name + " is already logged in!");
+            //     socket.write("ERROR: Already logged in from another session");
+            //     socket.close_connection();
+            //     return; 
+            // }
+            // ;
+            // server.addOnlineClient(client_name, socket);
             
-            if(server.isClientOnline(client_name)){
+            // if(server.isRegisteredClient(client_name)){
+            //     socket.write("Welcome back, " + client_name);
+            //     System.out.println(client_name + " has reconnected.");
+            // }
+            // else{
+            //     server.registerNewClient(client_name);
+            //     socket.write("Welcome, " + client_name);
+            //     System.out.println("New client " + client_name + " has joined.");
+            // }
+            int login_reply = server.try_login_register(client_name);
+            if(login_reply == -1){
                 System.out.println("Client " + client_name + " is already logged in!");
                 socket.write("ERROR: Already logged in from another session");
                 socket.close_connection();
                 return; 
             }
-            
-            server.addOnlineClient(client_name, socket);
-            
-            if(server.isRegisteredClient(client_name)){
+            else if(login_reply == 1){
                 socket.write("Welcome back, " + client_name);
                 System.out.println(client_name + " has reconnected.");
             }
-            else{
-                server.registerNewClient(client_name);
+            else if(login_reply == 0){
                 socket.write("Welcome, " + client_name);
                 System.out.println("New client " + client_name + " has joined.");
             }
+
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("Error during client handshake");
             return;

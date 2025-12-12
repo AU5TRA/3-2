@@ -104,7 +104,7 @@ public class Client {
             System.out.println("2. Show all online clients"); // done
             System.out.println("3. Show my uploaded files"); // done
             System.out.println("4. Download my file");// done
-            System.out.println("5. Upload a file");
+            System.out.println("5. Upload a file"); // done but request handling is left
             System.out.println("6. Show public files of other clients"); // done
             System.out.println("7. Download public files of other clients"); //  done
             System.out.println("8. Make a file request"); // done
@@ -224,7 +224,7 @@ public class Client {
                         long file_size = file_to_upload.length();
                         System.out.println("Is this file public? [y/n]: ");
                         char is_public = scanner.next().charAt(0);
-                        System.out.println(is_public);
+                        // System.out.println(is_public);
                         String visibility = (is_public == 'y' || is_public == 'Y') ? "public" : "private";
                         
                         socket.write(new Request(Request.UPLOAD_FILE, visibility + ":" + file_name + ":" + file_size));
