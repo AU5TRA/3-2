@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.Math.*;
 
 
 public class Server {
@@ -59,7 +60,7 @@ public class Server {
             new Worker(socket, this);
         }
     }
-    public CustomList get_clients(String type) {
+    public synchronized CustomList get_clients(String type) {
         if (type.equals("registered")) {
             // System.out.println("Preparing list of all registered clients.");
             return new CustomList(new ArrayList<>(clients));
@@ -71,7 +72,7 @@ public class Server {
         }
     }
 
-    public CustomList list_uploaded_files(String client_name) {
+    public synchronized CustomList list_uploaded_files(String client_name) {
         // System.out.println("Preparing list of uploaded files for " + client_name);
         String dir_name = "src/storage/" + client_name;
         File client_dir = new File(dir_name + "/public");
@@ -95,7 +96,8 @@ public class Server {
         }
         return new CustomList(files_array);
     }
-    public CustomList list_public_files() {
+
+    public synchronized CustomList list_public_files() {
         System.out.println("Preparing list of all public files from all clients.");
         ArrayList<String> public_files = new ArrayList<>();
         for (String client_name : clients) {
@@ -110,7 +112,6 @@ public class Server {
         }
         return new CustomList(public_files);
     }
-
 
     public String prepare_file_download(String client_name, SocketUtil socket, int fileNumber) {
         System.out.println("Preparing file download for file number " + fileNumber + " requested by " + client_name);
@@ -137,7 +138,7 @@ public class Server {
             byte[] buffer = new byte[4096];
             long remaining = file_size;
             while (remaining > 0) {
-                int read = fis.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                int read = fis.read(buffer, 0, (int)min(buffer.length, remaining));
                 if (read == -1) break;
                 socket.write(buffer, 0, read);
                 remaining -= read;
@@ -176,7 +177,7 @@ public class Server {
             byte[] buffer = new byte[4096];
             long remaining = file_size;
             while (remaining > 0) {
-                int read = fis.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                int read = fis.read(buffer, 0, (int) min(buffer.length, remaining));
                 if (read == -1) break;
                 socket.write(buffer, 0, read);
                 remaining -= read;
@@ -194,9 +195,11 @@ public class Server {
     public String generate_request_ID() {
         return String.valueOf(file_request_list.size() + 1);
     }
+
     public void make_file_request(FileRequest file_request) {
         file_request_list.add(file_request);
     }
+
     public void request_to_all_users(FileRequest file_request) {
         String description = file_request.requester + " has made a request (Request ID: " + file_request.requestID + ") with the description:\n" + file_request.description;
         System.out.println("Spreading file request: " + description);
@@ -207,6 +210,7 @@ public class Server {
             messages.get(client_name).add(m);
         }
     }
+
     public synchronized boolean isClientOnline(String client_name) {
         return online_clients_map.containsKey(client_name);
     }
@@ -255,7 +259,7 @@ public class Server {
         return "Connection closed for " + client_name;
     }
     
-        public String receive_file_upload(String client_name, SocketUtil sck, String metadata) {
+    public String receive_file_upload(String client_name, SocketUtil sck, String metadata) {
         System.out.println("Receiving file upload (negotiation) from " + client_name + " metadata: " + metadata);
         String[] parts = metadata.split(":");
         String filename;
@@ -263,12 +267,12 @@ public class Server {
         long file_size;
 
         if (parts[0].equals("REQUESTED")) {
-            // REQUESTED:request_id:filename:filesize
+            // REQUESTED:request_id:file_name:file_size
             filename = parts[2];
             file_size = Long.parseLong(parts[3]);
             upload_dir = "src/storage/" + client_name + "/public";
         } else {
-            // public/private:filename:filesize
+            // public/private:file_name:file_size
             filename = parts[1];
             file_size = Long.parseLong(parts[2]);
             upload_dir = "src/storage/" + client_name + "/" + parts[0];
@@ -277,6 +281,7 @@ public class Server {
         File dir = new File(upload_dir);
         if (!dir.exists()) dir.mkdirs();
         
+        // for threads
         synchronized (this) {
             if (CUR_BUFFER_SIZE + file_size > MAX_BUFFER_SIZE) {
                 try { sck.write("REJECT:BUFFER_FULL"); } catch (IOException ignored) {}
@@ -286,8 +291,10 @@ public class Server {
             CUR_BUFFER_SIZE += file_size;
         }
 
-        String fileID = "F" + System.currentTimeMillis() + "_" + (uploadSessions.size() + 1);
-        int negotiatedChunk = Math.min((int) Math.min(MAX_CHUNK_SIZE, file_size), Math.max(MIN_CHUNK_SIZE, (int)(Math.random() * (MAX_CHUNK_SIZE - MIN_CHUNK_SIZE + 1) + MIN_CHUNK_SIZE)));
+        String fileID = "File_" + System.currentTimeMillis() + "_" + (uploadSessions.size() + 1);
+        int random_chunk_size = (int)(random() * (MAX_CHUNK_SIZE - MIN_CHUNK_SIZE + 1) + MIN_CHUNK_SIZE);
+
+        // int random_chunk_size = Math.min((int) Math.min(MAX_CHUNK_SIZE, file_size), Math.max(MIN_CHUNK_SIZE, (int)(Math.random() * (MAX_CHUNK_SIZE - MIN_CHUNK_SIZE + 1) + MIN_CHUNK_SIZE)));
 
         File tempFile = new File(upload_dir + "/.upload_" + fileID + ".tmp");
         UploadSession session = new UploadSession();
@@ -297,21 +304,21 @@ public class Server {
         session.expectedSize = file_size;
         session.receivedSize = 0;
         session.tempFile = tempFile;
-        session.chunkSize = negotiatedChunk;
+        session.chunkSize = random_chunk_size;
         uploadSessions.put(fileID, session);
         /////////////////
         try {
             // tell client to start with chunk size and fileID
-            sck.write("READY:" + negotiatedChunk + ":" + fileID);
-            System.out.println("Negotiated chunk=" + negotiatedChunk + " fileID=" + fileID + " for " + client_name);
+            sck.write("READY:" + random_chunk_size + ":" + fileID);
+            System.out.println("Chunk Size:" + random_chunk_size + " fileID:" + fileID + " Client:" + client_name);
 
             FileOutputStream fos = new FileOutputStream(tempFile);
-            byte[] buffer = new byte[negotiatedChunk];
+            byte[] buffer = new byte[random_chunk_size];
             int seq = 0;
 
             while (session.receivedSize < session.expectedSize) {
                 seq++;
-                int toRead = (int) Math.min(buffer.length, session.expectedSize - session.receivedSize);
+                int toRead = (int) min(buffer.length, session.expectedSize - session.receivedSize);
                 int got = sck.read(buffer, 0, toRead);
                 if (got <= 0) {
                     throw new IOException("Client disconnected while uploading");
@@ -319,32 +326,38 @@ public class Server {
                 fos.write(buffer, 0, got);
                 session.receivedSize += got;
 
-                // send ack for this chunk
+                // send ack for got chunk
                 try { sck.write("ACK:" + fileID + ":" + seq + ":" + got); } catch (IOException ignored) {}
             }
             fos.close();
 
-            // optionally read a completion confirmation from client
-            Object finalMsgObj = sck.read();
-            String finalMsg = finalMsgObj instanceof String ? (String) finalMsgObj : "";
+            Object final_msg_obj = sck.read();
+            String final_msg = "";
+            if(final_msg_obj instance of String)
+                final_msg = (String) final_msg_obj;
+            // String finalMsg = finalMsgObj instanceof String ? (String) finalMsgObj : "";
 
-            // verify sizes
-            if (session.receivedSize == session.expectedSize && finalMsg.equals("COMPLETED:" + fileID)) {
-                // move temp file to final name
+
+            if (session.receivedSize == session.expectedSize && final_msg.equals("COMPLETED:" + fileID)) {
+                // client says ok
                 File finalFile = new File(upload_dir + "/" + filename);
-                if (finalFile.exists()) finalFile.delete();
+                if (finalFile.exists()) 
+                    finalFile.delete();
+                // if there is a file of that name, we erase it first    
                 tempFile.renameTo(finalFile);
+
                 synchronized (this) {
-                    CUR_BUFFER_SIZE -= session.expectedSize; // free reserved space
+                    CUR_BUFFER_SIZE -= session.expectedSize; // empty buffer
                 }
                 uploadSessions.remove(fileID);
                 sck.write("UPLOAD_SUCCESS");
+
                 System.out.println("Upload success " + filename + " from " + client_name);
                 return "OK";
             } else {
-                // mismatch or missing completion message
                 fos.close();
-                if (tempFile.exists()) tempFile.delete();
+                if (tempFile.exists()) 
+                    tempFile.delete(); // delete temp file to clear memory
                 synchronized (this) {
                     CUR_BUFFER_SIZE -= session.expectedSize;
                 }
@@ -355,7 +368,6 @@ public class Server {
             }
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("Error during upload: " + e.getMessage());
-            // cleanup
             try {
                 if (session.tempFile != null && session.tempFile.exists()) session.tempFile.delete();
             } catch (Exception ignored) {}

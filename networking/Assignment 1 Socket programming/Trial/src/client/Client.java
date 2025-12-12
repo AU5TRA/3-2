@@ -8,8 +8,8 @@ import java.io.File;
 import java.util.Scanner;
 import java.util.ArrayList;
 import java.net.SocketTimeoutException;
-import java.io.FileOutputStream;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 
 import utility.*;
 
@@ -19,26 +19,23 @@ public class Client {
     private static SocketUtil socket;
 
 
-
-
     public Client(String serverAddr, int serverPort) throws IOException {
         File file = new File("src/client/to_upload");
         if(!file.exists()){
             file.mkdir();
-            System.out.println("client side: Created directory to_upload in src/client/");
+            // System.out.println("client side: Created directory to_upload in src/client/");
         }
 
         File file_download = new File("src/client/downloads");
         if(!file_download.exists()){
             file_download.mkdir();
-            System.out.println("client side: Created directory downloads in src/client/");
+            // System.out.println("client side: Created directory downloads in src/client/");
 
         }
 
         socket = new SocketUtil(serverAddr, serverPort);
         System.out.println("Enter client name: ");
         client_name = scanner.nextLine();
-        
     }
 
      private static void upload_file_chunked(File file, long file_size, int chunk_size, String fileID) throws IOException, ClassNotFoundException{
@@ -99,10 +96,6 @@ public class Client {
         String reply = (String) socket.read();
         System.out.println("Server: " + reply);
 
-
-        // System.out.println("Connection established");
-        // System.out.println("Remote port: " + socket.socket.getPort());
-        // System.out.println("Local port: " + socket.socket.getLocalPort());
         boolean running = true;
 
         while(running){
@@ -126,9 +119,9 @@ public class Client {
                 case 1:
                     Request r = new Request(Request.LIST_ALL_CLIENTS);
                     socket.write(r);
-                    System.out.println("Requesting list of all clients...");
+                    // System.out.println("Requesting list of all clients...");
                     Object all_clients = socket.read();
-                    System.out.println("Received list of all clients from server.");
+                    // System.out.println("Received list of all clients from server.");
                     if (all_clients instanceof CustomList) {
                         CustomList clientsList = (CustomList) all_clients;
                         clientsList.showUsers("All");
@@ -189,7 +182,7 @@ public class Client {
                     scanner.nextLine();
                     String request_id = "";
                     if(is_requested == 'y' || is_requested == 'Y'){
-                        System.out.println("Enter the request ID: ");
+                        System.out.println("Enter request ID: ");
                         request_id = scanner.nextLine();
                         System.out.println("Enter the file name to upload (place the file in src/client/to_upload/): ");
                         String file_name = scanner.nextLine();
@@ -201,7 +194,7 @@ public class Client {
                         }
                         
                         long file_size = file_to_upload.length();
-                        System.out.println("File size: " + file_size + " bytes");
+                        System.out.println("[File size: " + file_size + " bytes]");
                         
                         socket.write(new Request(Request.UPLOAD_FILE, "REQUESTED:" + request_id + ":" + file_name + ":" + file_size));
                         Object server_response = socket.read();
@@ -211,7 +204,7 @@ public class Client {
                                 String[] parts = response.split(":");
                                 int chunkSize = Integer.parseInt(parts[1]);
                                 String fileID = parts[2];
-                                System.out.println("Server ready. chunkSize=" + chunkSize + " fileID=" + fileID);
+                                // System.out.println("Server ready. chunkSize=" + chunkSize + " fileID=" + fileID);
                                 upload_file_chunked(file_to_upload, file_size, chunkSize, fileID);
                             } else {
                                 System.out.println("Server response: " + response);
@@ -234,7 +227,7 @@ public class Client {
                         System.out.println(is_public);
                         String visibility = (is_public == 'y' || is_public == 'Y') ? "public" : "private";
                         
-                        socket.write(new Request(Request.UPLOAD_FILE, "REQUESTED:" + request_id + ":" + file_name + ":" + file_size));
+                        socket.write(new Request(Request.UPLOAD_FILE, visibility + ":" + file_name + ":" + file_size));
                         Object server_response = socket.read();
                         if (server_response instanceof String) {
                             String response = (String) server_response;
@@ -242,7 +235,7 @@ public class Client {
                                 String[] parts = response.split(":");
                                 int chunkSize = Integer.parseInt(parts[1]);
                                 String fileID = parts[2];
-                                System.out.println("Server ready. chunkSize=" + chunkSize + " fileID=" + fileID);
+                                // System.out.println("Server ready. chunkSize=" + chunkSize + " fileID=" + fileID);
                                 upload_file_chunked(file_to_upload, file_size, chunkSize, fileID);
                             } else {
                                 System.out.println("Server response: " + response);
@@ -293,7 +286,7 @@ public class Client {
                     break;
                     
                 case 8:
-                    scanner.nextLine(); // consume newline
+                    scanner.nextLine();
                     System.out.println("Enter description for the file request: ");
                     String description = scanner.nextLine();
                     FileRequest file_request = new FileRequest(client_name, description);

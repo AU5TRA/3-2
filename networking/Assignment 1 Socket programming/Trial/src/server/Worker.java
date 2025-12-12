@@ -91,7 +91,7 @@ public class Worker extends Thread {
                     server.make_file_request(file_request);
                     server.request_to_all_users(file_request);
                 }
-                \
+                
                 else if(((Request)obj).request.equals(Request.UPLOAD_FILE)){
                     System.out.println("Upload file request from " + client_name);
                     String metadata = (String) ((Request)obj).getData();
