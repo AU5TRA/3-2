@@ -293,6 +293,14 @@ public class Client {
                     socket.write(file_request);
                     System.out.println("File request sent to server.");
                     break;
+                case 10:
+                    socket.write(new Request(Request.VIEW_HISTORY));
+                    Object historyObj = socket.read();
+                    if (historyObj instanceof CustomList) {
+                        CustomList historyList = (CustomList) historyObj;
+                        historyList.showHistory(client_name);
+                    }
+                    break;
                 case 11:
                     socket.write(new Request(Request.LOG_OUT));
                     running = false;

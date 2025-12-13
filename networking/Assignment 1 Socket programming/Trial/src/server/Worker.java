@@ -114,6 +114,11 @@ public class Worker extends Thread {
                     String result = server.receive_file_upload(client_name, socket, metadata);
                     System.out.println("Upload result: " + result);
                 }
+                else if(((Request)obj).request.equals(Request.VIEW_HISTORY)){
+                    System.out.println("View history request from " + client_name);
+                    CustomList history = server.get_client_history(client_name);
+                    socket.write(history);
+                }
                 else if(((Request)obj).request.equals(Request.LOG_OUT)){
                     System.out.println("Log out request from " + client_name);
                     socket.write(server.close_client_connection(client_name));

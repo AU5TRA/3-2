@@ -66,4 +66,19 @@ public class CustomList implements Serializable {
         System.out.println();
     }
 
+    public void showHistory(String client_name) {
+        
+        if(items.size() == 0){
+            System.out.println("No history found for " + client_name);
+            return;
+        }
+        System.out.println("History for " + client_name + ":");
+        int i = 1;
+        for (String item : items) {
+            System.out.println(i+ ". " + item);
+            i++;
+        }
+        System.out.println();
+    }
+
 }

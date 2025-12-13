@@ -20,6 +20,11 @@ import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.Set;
+import java.io.FileWriter;
+import java.io.BufferedWriter;
+import java.io.PrintWriter;
+import java.time.LocalDateTime;
+
 
 public class Server {
     public int MIN_CHUNK_SIZE, MAX_CHUNK_SIZE;
@@ -36,6 +41,8 @@ public class Server {
     private ConcurrentMap<String, UploadSession> uploadSessions;
     private AtomicInteger requestCounter = new AtomicInteger(0);
     private AtomicInteger uploadCounter = new AtomicInteger(0);
+    // upload and download history
+    private ConcurrentMap<String, List<String>> log_lock; // client, upload and download hsitory
 
     public Server() throws IOException, ClassNotFoundException { 
         this.CUR_BUFFER_SIZE = new AtomicLong(0L);
@@ -46,12 +53,14 @@ public class Server {
 
 
 
+
         clients = Collections.synchronizedSet(new HashSet<String>());
         server_socket = new ServerSocket(6666);
         files = new ArrayList<String>();  
         online_clients_map = new ConcurrentHashMap<>();
         messages = new ConcurrentHashMap<>();
         file_request_list = new CopyOnWriteArrayList<>();
+        log_lock = new ConcurrentHashMap<>();
 
 
         System.out.println("Server started on port 6666...");
@@ -77,6 +86,18 @@ public class Server {
         } else {
             return null;
         }
+    }
+
+    public synchronized CustomList get_client_history(String client_name) {
+        System.out.println("Preparing history for client " + client_name);
+        String path = "src/storage/" + client_name + "/log.txt";
+        List<String> history_lines = new ArrayList<>();
+        try {
+            history_lines = Files.readAllLines(Paths.get(path));
+        } catch (IOException e) {
+            System.out.println("Error reading history for " + client_name + ": " + e.getMessage());
+        }
+        return new CustomList(new ArrayList<String>(history_lines));
     }
 
     public synchronized CustomList list_uploaded_files(String client_name) {
@@ -128,7 +149,8 @@ public class Server {
             return "ERROR";
         }
         String file_path = uploaded_files.items.get(fileNumber - 1);
-        String full_path = "src/storage/" + client_name + "/" + file_path;
+        String partial_path = client_name + "/" + file_path;
+        String full_path = "src/storage/" + partial_path;
 
         System.out.println("Full file path: " + full_path);
         File file = new File(full_path);
@@ -152,6 +174,8 @@ public class Server {
             }
             socket.write("done"); 
             System.out.println("File " + file_path + " sent to " + client_name);
+            // history_map.computeIfAbsent(client_name, k -> Collections.synchronizedList(new ArrayList<>())).add("Download: " + file_path + " at " + LocalDateTime.now().toString());
+            append_to_log(client_name, Color.GREEN + "Download: " + Color.RESET + partial_path + " at " + LocalDateTime.now().toString());
             return "OK";
         } catch (IOException e) {
             System.out.println("Error sending file: " + e.getMessage());
@@ -166,7 +190,7 @@ public class Server {
         String extracted_path = parts.length > 1 ? parts[1] : file_path;
         // file_path = parts[0] + "/public/" + extracted_path;
         file_path = "/public/" + extracted_path;
-
+        String partial_path = parts[0] + "/"+ extracted_path;
         String full_path = "src/storage/"  + parts[0] + file_path;
         System.out.println("File extracted from: "  + full_path);
         System.out.println("File exported to: " + file_path);
@@ -191,6 +215,8 @@ public class Server {
             }
             socket.write("done"); 
             System.out.println("File " + file_path + " sent to " + client_name);
+            // history_map.computeIfAbsent(client_name, k -> Collections.synchronizedList(new ArrayList<>())).add("Download: " + file_path + " at " + LocalDateTime.now().toString());
+            append_to_log(client_name, Color.GREEN + "Download: " + Color.RESET + partial_path + " at " + LocalDateTime.now().toString());
             return "OK";
         } catch (IOException e) {
             System.out.println("Error sending file: " + e.getMessage());
@@ -241,6 +267,8 @@ public class Server {
             file.mkdir();
             file = new File("src/storage/" + client_name + "/private");
             file.mkdir();
+            file = new File("src/storage/" + client_name + "/log.txt");
+            file.createNewFile();
             System.out.println("Created directory for new client: " + client_name);
         }
     }
@@ -279,17 +307,20 @@ public class Server {
         String filename;
         String upload_dir;
         long file_size;
+        String p_name="";
 
         if (parts[0].equals("REQUESTED")) {
             // REQUESTED:request_id:file_name:file_size
             filename = parts[2];
             file_size = Long.parseLong(parts[3]);
+            p_name = client_name + "/" + filename;
             upload_dir = "src/storage/" + client_name + "/public";
         } else {
             // public/private:file_name:file_size
             filename = parts[1];
             file_size = Long.parseLong(parts[2]);
             upload_dir = "src/storage/" + client_name + "/" + parts[0];
+            p_name=  client_name + "/" + filename;
         }
 
         File dir = new File(upload_dir);
@@ -400,6 +431,8 @@ public class Server {
                 
                 uploadSessions.remove(fileID);
                 sck.write("UPLOAD_SUCCESS");
+                // history_map.computeIfAbsent(client_name, k -> Collections.synchronizedList(new ArrayList<>())).add("Upload: " + p_name + " at " + LocalDateTime.now().toString());
+                append_to_log(client_name, Color.RED + "Upload: "+Color.RESET + p_name + " at " + LocalDateTime.now().toString());
 
                 System.out.println("Upload success " + filename + " from " + client_name);
                 return "OK";
@@ -453,6 +486,21 @@ public class Server {
         return 1;
     }
 
+    private void append_to_log(String client_name, String log){
+        String path = "src/storage/" + client_name + "/log.txt";
+        Object lock = log_lock.computeIfAbsent(client_name, k -> Collections.synchronizedList(new ArrayList<>()));
+        synchronized (lock) {
+            try (FileWriter fw = new FileWriter(path, true);
+                 BufferedWriter bw = new BufferedWriter(fw);
+                 PrintWriter out = new PrintWriter(bw)) {
+                
+                out.println(log);
+
+            } catch (IOException e) {
+                System.out.println("Error writing to log for " + client_name + ": " + e.getMessage());
+            }
+        }       
+    }
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         Server server = new Server();
     }
