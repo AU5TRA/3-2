@@ -59,7 +59,7 @@ public class Worker extends Thread {
             }
             else if(login_reply == 0){
                 socket.write("Welcome, " + client_name);
-                System.out.println("New client " + client_name + " has joined.");
+                System.out.println(Color.GREEN + "New client " + client_name + " has joined." + Color.RESET );
             }
 
         } catch (IOException | ClassNotFoundException e) {
@@ -105,7 +105,10 @@ public class Worker extends Thread {
                     file_request.requestID = server.generate_request_ID();
                     System.out.println(client_name + " requested a file, request ID: " + file_request.requestID);
                     server.make_file_request(file_request);
-                    server.request_to_all_users(file_request);
+                    if(file_request.recipient.equals("all"))
+                        server.request_to_all_users(file_request);
+                    else
+                        server.request_to_specific_user(file_request);
                 }
                 
                 else if(((Request)obj).request.equals(Request.UPLOAD_FILE)){
@@ -118,6 +121,11 @@ public class Worker extends Thread {
                     System.out.println("View history request from " + client_name);
                     CustomList history = server.get_client_history(client_name);
                     socket.write(history);
+                }
+                else if(((Request)obj).request.equals(Request.VIEW_UNREAD_MESSAGES)){
+                    System.out.println("View unread messages request from " + client_name);
+                    CustomList messages = server.get_unread_messages(client_name);
+                    socket.write(messages);
                 }
                 else if(((Request)obj).request.equals(Request.LOG_OUT)){
                     System.out.println("Log out request from " + client_name);

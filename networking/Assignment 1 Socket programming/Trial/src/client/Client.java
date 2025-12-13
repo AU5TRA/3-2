@@ -109,7 +109,7 @@ public class Client {
             System.out.println("7. Download public files of other clients"); //  done
             System.out.println("8. Make a file request"); // done
             System.out.println("9. View Unread messages");
-            System.out.println("10. View upload and download history");
+            System.out.println("10. View upload and download history"); // done
             System.out.println("11. Log Out"); // done
             System.out.println("Enter your choice: ");
 
@@ -289,9 +289,27 @@ public class Client {
                     scanner.nextLine();
                     System.out.println("Enter description for the file request: ");
                     String description = scanner.nextLine();
-                    FileRequest file_request = new FileRequest(client_name, description);
+                    System.out.println("Send to all users? [y/n]: ");
+                    char to_all = scanner.next().charAt(0);
+                    FileRequest file_request;
+                    if(to_all == 'n' || to_all == 'N'){
+                        System.out.println("Give name of recipient:");
+                        String recipient = scanner.next();
+                        file_request = new FileRequest(client_name, description, recipient);
+                    }
+                    else{
+                        file_request = new FileRequest(client_name, description);
+                    }
                     socket.write(file_request);
                     System.out.println("File request sent to server.");
+                    break;
+                case 9:
+                    socket.write(new Request(Request.VIEW_UNREAD_MESSAGES)); 
+                    Object messagesObj = socket.read();
+                    if (messagesObj instanceof CustomList) {
+                        CustomList messagesList = (CustomList) messagesObj;
+                        messagesList.showMessages();
+                    }   
                     break;
                 case 10:
                     socket.write(new Request(Request.VIEW_HISTORY));

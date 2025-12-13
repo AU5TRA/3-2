@@ -81,4 +81,18 @@ public class CustomList implements Serializable {
         System.out.println();
     }
 
+    public void showMessages() {
+        
+        if(items.size() == 0){
+            System.out.println("No unread messages.");
+            return;
+        }
+        System.out.println("Unread Messages:");
+        int i = 1;
+        for (String item : items) {
+            System.out.println(i+ ". " + item);
+            i++;
+        }
+        System.out.println();
+    }
 }

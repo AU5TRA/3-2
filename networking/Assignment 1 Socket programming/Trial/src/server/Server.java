@@ -37,7 +37,7 @@ public class Server {
     private List<String> files;
     private ConcurrentMap<String, SocketUtil> online_clients_map;
     private CopyOnWriteArrayList<FileRequest> file_request_list;
-    private ConcurrentMap<String, List<Message>> messages;
+    private ConcurrentMap<String, CopyOnWriteArrayList<Message>> messages;
     private ConcurrentMap<String, UploadSession> uploadSessions;
     private AtomicInteger requestCounter = new AtomicInteger(0);
     private AtomicInteger uploadCounter = new AtomicInteger(0);
@@ -63,7 +63,7 @@ public class Server {
         log_lock = new ConcurrentHashMap<>();
 
 
-        System.out.println("Server started on port 6666...");
+        System.out.println("Server UP on port 6666");
 
         while(true){
             System.out.println("Waiting for connection...");
@@ -236,12 +236,13 @@ public class Server {
     public void request_to_all_users(FileRequest file_request) {
         String description = file_request.requester + " has made a request (Request ID: " + file_request.requestID + ") with the description:\n" + file_request.description;
         System.out.println("Spreading file request: " + description);
-        Message m = new Message(file_request.requester, "all", true, description);
+        // Message m = new Message(file_request.requester, "all", true, description);
         for (String client_name : new ArrayList<>(clients)) { 
             if (client_name.equals(file_request.requester)) // don't send to requester
                 continue;
+            Message m = new Message(file_request.requester, client_name, true, description);
             // messages.get(client_name).add(m);
-            messages.computeIfAbsent(client_name, k -> Collections.synchronizedList(new ArrayList<>())).add(m);
+            messages.computeIfAbsent(client_name, k -> new CopyOnWriteArrayList<>()).add(m);
         }
     }
 
@@ -259,7 +260,7 @@ public class Server {
     
     public synchronized void registerNewClient(String client_name) throws IOException {
         clients.add(client_name);
-        messages.put(client_name, new ArrayList<>());
+        messages.putIfAbsent(client_name, new CopyOnWriteArrayList<>());
         File file = new File("src/storage/" + client_name);
         if(!file.exists()){
             file.mkdir();
@@ -471,7 +472,7 @@ public class Server {
         boolean registered = clients.contains(client_name);
         if(!registered){
             clients.add(client_name);
-            messages.put(client_name, new ArrayList<>());
+            messages.putIfAbsent(client_name, new CopyOnWriteArrayList<>());
             File file = new File("src/storage/" + client_name);
             if(!file.exists()){
                 file.mkdir();
@@ -501,6 +502,26 @@ public class Server {
             }
         }       
     }
+    public CustomList get_unread_messages(String client_name){
+        System.out.println("Preparing unread messages for " + client_name);
+        ArrayList<String> unread_msgs = new ArrayList<>();
+        synchronized(messages){
+            CopyOnWriteArrayList<Message> client_messages = messages.get(client_name);
+            if(client_messages != null){
+                for(Message m : client_messages){   
+                    synchronized(m){
+                        if(m.receiver.equals(client_name) && !m.seen_status){
+                            String msg_entry = Color.YELLOW + m.sender + ":\n" + Color.RESET + m.msg + "\n";
+                            unread_msgs.add(msg_entry);
+                            m.seen_status = true; // mark as seen
+                        }
+                    }
+                }
+            }
+        }
+        return new CustomList(unread_msgs);
+    }
+
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         Server server = new Server();
     }
