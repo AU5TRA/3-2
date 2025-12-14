@@ -105,10 +105,7 @@ public class Worker extends Thread {
                     file_request.requestID = server.generate_request_ID();
                     System.out.println(client_name + " requested a file, request ID: " + file_request.requestID);
                     server.make_file_request(file_request);
-                    if(file_request.recipient.equals("all"))
-                        server.request_to_all_users(file_request);
-                    else
-                        server.request_to_specific_user(file_request);
+                    server.request_to_users(file_request);
                 }
                 
                 else if(((Request)obj).request.equals(Request.UPLOAD_FILE)){

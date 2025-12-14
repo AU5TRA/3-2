@@ -9,4 +9,14 @@ public class UploadSession {
     public long receivedSize;
     public File tempFile;
     public int chunkSize;
+
+    public UploadSession(String fileID, String uploader, String filename, long expectedSize, File t_file, int chunkSize) {
+        this.fileID = fileID;
+        this.uploader = uploader;
+        this.filename = filename;
+        this.expectedSize = expectedSize;
+        this.receivedSize = 0L;
+        this.tempFile = t_file;
+        this.chunkSize = chunkSize;
+    }
 }

@@ -104,11 +104,11 @@ public class Client {
             System.out.println("2. Show all online clients"); // done
             System.out.println("3. Show my uploaded files"); // done
             System.out.println("4. Download my file");// done
-            System.out.println("5. Upload a file"); // done but request handling is left
+            System.out.println("5. Upload a file"); // done 
             System.out.println("6. Show public files of other clients"); // done
             System.out.println("7. Download public files of other clients"); //  done
             System.out.println("8. Make a file request"); // done
-            System.out.println("9. View Unread messages");
+            System.out.println("9. View Unread messages"); // done
             System.out.println("10. View upload and download history"); // done
             System.out.println("11. Log Out"); // done
             System.out.println("Enter your choice: ");
@@ -184,6 +184,7 @@ public class Client {
                     if(is_requested == 'y' || is_requested == 'Y'){
                         System.out.println("Enter request ID: ");
                         request_id = scanner.nextLine();
+                        
                         System.out.println("Enter the file name to upload (place the file in src/client/to_upload/): ");
                         String file_name = scanner.nextLine();
                         File file_to_upload = new File("src/client/to_upload/" + file_name);
@@ -298,7 +299,7 @@ public class Client {
                         file_request = new FileRequest(client_name, description, recipient);
                     }
                     else{
-                        file_request = new FileRequest(client_name, description);
+                        file_request = new FileRequest(client_name, description, "all");
                     }
                     socket.write(file_request);
                     System.out.println("File request sent to server.");

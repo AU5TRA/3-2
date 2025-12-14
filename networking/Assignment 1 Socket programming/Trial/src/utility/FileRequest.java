@@ -6,12 +6,6 @@ public class FileRequest extends Request {
     public String description;
     public String recipient; 
 
-    public FileRequest(String requester, String description) {
-        super(Request.FILE_REQUEST);
-        this.requester = requester;
-        this.description = description;
-        this.recipient = "all";
-    }
     public FileRequest(String requester, String description, String recipient) {
         super(Request.FILE_REQUEST);
         this.requester = requester;

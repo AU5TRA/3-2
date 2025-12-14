@@ -41,14 +41,16 @@ public class Server {
     private ConcurrentMap<String, UploadSession> uploadSessions;
     private AtomicInteger requestCounter = new AtomicInteger(0);
     private AtomicInteger uploadCounter = new AtomicInteger(0);
+    private ConcurrentMap<String, String> request_map;
+
     // upload and download history
     private ConcurrentMap<String, List<String>> log_lock; // client, upload and download hsitory
 
     public Server() throws IOException, ClassNotFoundException { 
         this.CUR_BUFFER_SIZE = new AtomicLong(0L);
-        this.MAX_BUFFER_SIZE = 250 * 1024; // default 250 KB
-        this.MIN_CHUNK_SIZE = 1024; // 1 KB
-        this.MAX_CHUNK_SIZE = 8 * 1024; // 8 KB
+        this.MAX_BUFFER_SIZE = 1024 * 1024; // default 1 MB
+        this.MIN_CHUNK_SIZE = 2 * 1024; // 2 KB
+        this.MAX_CHUNK_SIZE = 16 * 1024; // 16 KB
         this.uploadSessions = new ConcurrentHashMap<>();
 
 
@@ -61,6 +63,7 @@ public class Server {
         messages = new ConcurrentHashMap<>();
         file_request_list = new CopyOnWriteArrayList<>();
         log_lock = new ConcurrentHashMap<>();
+        request_map = new ConcurrentHashMap<>();
 
 
         System.out.println("Server UP on port 6666");
@@ -231,18 +234,26 @@ public class Server {
 
     public void make_file_request(FileRequest file_request) {
         file_request_list.add(file_request); // used copyOnWrite
+        request_map.putIfAbsent(file_request.requestID, file_request.requester);
     }
 
-    public void request_to_all_users(FileRequest file_request) {
+    public void request_to_users(FileRequest file_request) {
         String description = file_request.requester + " has made a request (Request ID: " + file_request.requestID + ") with the description:\n" + file_request.description;
         System.out.println("Spreading file request: " + description);
+        Message m;
         // Message m = new Message(file_request.requester, "all", true, description);
-        for (String client_name : new ArrayList<>(clients)) { 
-            if (client_name.equals(file_request.requester)) // don't send to requester
-                continue;
-            Message m = new Message(file_request.requester, client_name, true, description);
-            // messages.get(client_name).add(m);
-            messages.computeIfAbsent(client_name, k -> new CopyOnWriteArrayList<>()).add(m);
+        if(file_request.recipient.equals("all")){
+            for (String client_name : new ArrayList<>(clients)) { 
+                if (client_name.equals(file_request.requester)) // don't send to requester
+                    continue;
+                m = new Message(file_request.requester, client_name, true, description);
+                // messages.get(client_name).add(m);
+                messages.computeIfAbsent(client_name, k -> new CopyOnWriteArrayList<>()).add(m);
+            }
+        }
+        else{
+            m = new Message(file_request.requester, file_request.recipient, true, description);
+            messages.computeIfAbsent(file_request.recipient, k -> new CopyOnWriteArrayList<>()).add(m);
         }
     }
 
@@ -301,6 +312,15 @@ public class Server {
         System.out.println("Client " + client_name + " has been removed from online clients.");
         return "Connection closed for " + client_name;
     }
+    public boolean check_request_validity(String client_name, String request_id){
+
+        for(FileRequest fr: file_request_list){  // copyOnWrite
+            if(fr.requestID.equals(request_id) && fr.recipient.equals(client_name)){
+                return true;
+            }
+        }
+        return false;
+    }
     
     public String receive_file_upload(String client_name, SocketUtil sck, String metadata) {
         System.out.println("Receiving file upload (negotiation) from " + client_name + " metadata: " + metadata);
@@ -309,13 +329,24 @@ public class Server {
         String upload_dir;
         long file_size;
         String p_name="";
+        boolean req = false;
+        String req_id="";
 
         if (parts[0].equals("REQUESTED")) {
+            req = true;
+            req_id = parts[1];
             // REQUESTED:request_id:file_name:file_size
             filename = parts[2];
             file_size = Long.parseLong(parts[3]);
             p_name = client_name + "/" + filename;
             upload_dir = "src/storage/" + client_name + "/public";
+
+            boolean chk = check_request_validity(client_name, req_id);
+            if (chk == false) {
+                try { sck.write("REJECT:INVALID_REQUEST"); } catch (IOException ignored) {}
+                System.out.println("Rejected upload from " + client_name + " due to invalid request ID");
+                return "ERROR: INVALID_REQUEST";
+            }
         } else {
             // public/private:file_name:file_size
             filename = parts[1];
@@ -350,14 +381,14 @@ public class Server {
         // int random_chunk_size = Math.min((int) Math.min(MAX_CHUNK_SIZE, file_size), Math.max(MIN_CHUNK_SIZE, (int)(Math.random() * (MAX_CHUNK_SIZE - MIN_CHUNK_SIZE + 1) + MIN_CHUNK_SIZE)));
 
         File tempFile = new File(upload_dir + "/.upload_" + fileID + ".tmp");
-        UploadSession session = new UploadSession();
-        session.fileID = fileID;
-        session.uploader = client_name;
-        session.filename = filename;
-        session.expectedSize = file_size;
-        session.receivedSize = 0;
-        session.tempFile = tempFile;
-        session.chunkSize = random_chunk_size;
+        UploadSession session = new UploadSession(fileID, client_name, filename, file_size, tempFile, random_chunk_size);
+        // session.fileID = fileID;
+        // session.uploader = client_name;
+        // session.filename = filename;
+        // session.expectedSize = file_size;
+        // session.receivedSize = 0;
+        // session.tempFile = tempFile;
+        // session.chunkSize = random_chunk_size;
         uploadSessions.put(fileID, session);
         /////////////////
         try {
@@ -368,21 +399,6 @@ public class Server {
             FileOutputStream fos = new FileOutputStream(tempFile);
             byte[] buffer = new byte[random_chunk_size];
             int seq = 0;
-            // synchronized(session){
-            //     while (session.receivedSize < session.expectedSize) {
-            //         seq++;
-            //         int toRead = (int) Math.min(buffer.length, session.expectedSize - session.receivedSize);
-            //         int got = sck.read(buffer, 0, toRead);
-            //         if (got <= 0) {
-            //             throw new IOException("Client disconnected while uploading");
-            //         }
-            //         fos.write(buffer, 0, got);
-            //         session.receivedSize += got;
-
-            //         // send ack for got chunk
-            //         try { sck.write("ACK:" + fileID + ":" + seq + ":" + got); } catch (IOException ignored) {}
-            //     }
-            // }
             while(true){
                 // synchronizing only what is necessary
                 synchronized(session){
@@ -434,6 +450,14 @@ public class Server {
                 sck.write("UPLOAD_SUCCESS");
                 // history_map.computeIfAbsent(client_name, k -> Collections.synchronizedList(new ArrayList<>())).add("Upload: " + p_name + " at " + LocalDateTime.now().toString());
                 append_to_log(client_name, Color.RED + "Upload: "+Color.RESET + p_name + " at " + LocalDateTime.now().toString());
+                if(req){
+                    String msg_rcpt= request_map.get(req_id);
+                    String msg_text = "Your requested file (Request ID: " + req_id + ") has been uploaded as " + p_name;
+                    Message m = new Message("Server", msg_rcpt, false, msg_text);
+                    messages.computeIfAbsent(msg_rcpt, k -> new CopyOnWriteArrayList<>()).add(m);
+                }
+                    
+
 
                 System.out.println("Upload success " + filename + " from " + client_name);
                 return "OK";
