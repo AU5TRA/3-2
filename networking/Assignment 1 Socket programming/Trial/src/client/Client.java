@@ -60,17 +60,9 @@ public class Client {
                 }
                 uploaded += read_bytes;
                 double progress = (double) uploaded / file_size * 100;
-                int bar_length = 50;
-                int filled = (int) (bar_length * uploaded / file_size);
-                System.out.print("\rUpload progress: [");
-                for (int i = 0; i < bar_length; i++) {
-                    if (i < filled) System.out.print("=");
-                    else System.out.print(" ");
-                }
-                System.out.printf("] %.1f%% (%d/%d bytes)", progress, uploaded, file_size);
+                System.out.printf("\rUpload progress: %.1f%% (%d/%d bytes)", progress, uploaded, file_size);
             }
             System.out.println();
-            // send completion message with fileID
             socket.write("COMPLETED:" + fileID);
             Object confirmation = socket.read();
             if (confirmation instanceof String) {
@@ -78,7 +70,7 @@ public class Client {
                 if (msg.equals("UPLOAD_SUCCESS")) {
                     System.out.println("File uploaded successfully!");
                 } else {
-                    System.out.println("Server response: " + msg);
+                    System.out.println(Color.RED+ "Server response: " + Color.RESET + msg);
                 }
             }
         } catch (IOException e) {
@@ -173,7 +165,7 @@ public class Client {
                         }
                     }
                     else{
-                        System.out.println("No files available to download.");
+                        // System.out.println("No files available to download.");
                     }
                 break;
                 case 5:
@@ -208,7 +200,7 @@ public class Client {
                                 // System.out.println("Server ready. chunkSize=" + chunkSize + " fileID=" + fileID);
                                 upload_file_chunked(file_to_upload, file_size, chunkSize, fileID);
                             } else {
-                                System.out.println("Server response: " + response);
+                                System.out.println(Color.RED+ "Server response: " + Color.RESET + response);
                             }
                         }
                     }
@@ -239,7 +231,7 @@ public class Client {
                                 // System.out.println("Server ready. chunkSize=" + chunkSize + " fileID=" + fileID);
                                 upload_file_chunked(file_to_upload, file_size, chunkSize, fileID);
                             } else {
-                                System.out.println("Server response: " + response);
+                                System.out.println(Color.RED+ "Server response: " + Color.RESET+ response);
                             }
                         }
                     }
@@ -282,7 +274,7 @@ public class Client {
                         }
                     }
                     else{
-                        System.out.println("No files available to download.");
+                        // System.out.println("No files available to download.");
                     }
                     break;
                     

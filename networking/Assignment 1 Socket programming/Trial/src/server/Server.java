@@ -48,9 +48,9 @@ public class Server {
 
     public Server() throws IOException, ClassNotFoundException { 
         this.CUR_BUFFER_SIZE = new AtomicLong(0L);
-        this.MAX_BUFFER_SIZE = 1024 * 1024; // default 1 MB
+        this.MAX_BUFFER_SIZE = 1024 * 1024 * 4; // 4 MB
         this.MIN_CHUNK_SIZE = 2 * 1024; // 2 KB
-        this.MAX_CHUNK_SIZE = 16 * 1024; // 16 KB
+        this.MAX_CHUNK_SIZE = 16 * 1024; // 64 KB
         this.uploadSessions = new ConcurrentHashMap<>();
 
 
@@ -72,19 +72,17 @@ public class Server {
             System.out.println("Waiting for connection...");
             socket = new SocketUtil(server_socket.accept());
             
-            System.out.println("Connection established");
-            // System.out.println("Remote port: " + socket.socket.getPort());
-            // System.out.println("Local port: " + socket.socket.getLocalPort());
-            
+            System.out.println("New Connection established");
             new Worker(socket, this);
         }
     }
+
     public synchronized CustomList get_clients(String type) {
         if (type.equals("registered")) {
-            // System.out.println("Preparing list of all registered clients.");
+            System.out.println("List of All clients");
             return new CustomList(new ArrayList<>(clients));
         } else if (type.equals("online")) {
-            // System.out.println("Preparing list of all online clients.");
+            System.out.println("List of Online clients");
             return new CustomList(new ArrayList<>(online_clients_map.keySet()));
         } else {
             return null;
@@ -105,6 +103,7 @@ public class Server {
 
     public synchronized CustomList list_uploaded_files(String client_name) {
         // System.out.println("Preparing list of uploaded files for " + client_name);
+        System.out.println(" List of uploaded files.");
         String dir_name = "src/storage/" + client_name;
         File client_dir = new File(dir_name + "/public");
 
@@ -129,7 +128,7 @@ public class Server {
     }
 
     public synchronized CustomList list_public_files() {
-        System.out.println("Preparing list of all public files from all clients.");
+        System.out.println("List of all public files from all clients.");
         ArrayList<String> public_files = new ArrayList<>();
         for (String client_name : new ArrayList<>(clients)) {
             String dir_name = "src/storage/" + client_name + "/public";
@@ -169,8 +168,11 @@ public class Server {
 
             byte[] buffer = new byte[4096];
             long remaining = file_size;
+
+            
             while (remaining > 0) {
-                int read = fis.read(buffer, 0, (int)Math.min(buffer.length, remaining));
+                // int read = fis.read(buffer, 0, (int)Math.min(buffer.length, remaining));
+                int read = fis.read(buffer, 0, (int)Math.min(MAX_CHUNK_SIZE, remaining));
                 if (read == -1) break;
                 socket.write(buffer, 0, read);
                 remaining -= read;
@@ -178,16 +180,17 @@ public class Server {
             socket.write("done"); 
             System.out.println("File " + file_path + " sent to " + client_name);
             // history_map.computeIfAbsent(client_name, k -> Collections.synchronizedList(new ArrayList<>())).add("Download: " + file_path + " at " + LocalDateTime.now().toString());
-            append_to_log(client_name, Color.GREEN + "Download: " + Color.RESET + partial_path + " at " + LocalDateTime.now().toString());
+            append_to_log(client_name, Color.GREEN + "Download: " + Color.RESET + partial_path + " at " + LocalDateTime.now().toString() + " Status: Successful");
             return "OK";
         } catch (IOException e) {
             System.out.println("Error sending file: " + e.getMessage());
+            append_to_log(client_name, Color.GREEN + "Download: " + Color.RESET + partial_path + " at " + LocalDateTime.now().toString() + " Status: Failed");
             try { socket.write(Color.RED+ "ERROR" + Color.RESET + ": Failed to download file."); } catch (IOException ignored) {}
             return "ERROR";
         }
     }
 
-    public String prepare_file_download(String client_name, SocketUtil socket, String file_path){
+    public String prepare_public_file_download(String client_name, SocketUtil socket, String file_path){
         System.out.println("Server side " + file_path);
         String[] parts = file_path.split("/", 2);
         String extracted_path = parts.length > 1 ? parts[1] : file_path;
@@ -205,13 +208,15 @@ public class Server {
 
         try (FileInputStream fis = new FileInputStream(file)) {
             long file_size = file.length();
-            String info = "FILE_INFO:" + file_path + ":" + file_size;
+            // String info = "FILE_INFO:" + file_path + ":" + file_size;
+            String info = "FILE_INFO:" + extracted_path + ":" + file_size;
             socket.write(info);
 
             byte[] buffer = new byte[4096];
             long remaining = file_size;
             while (remaining > 0) {
-                int read = fis.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                // int read = fis.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                int read = fis.read(buffer, 0, (int)Math.min(MAX_CHUNK_SIZE, remaining));
                 if (read == -1) break;
                 socket.write(buffer, 0, read);
                 remaining -= read;
@@ -219,10 +224,12 @@ public class Server {
             socket.write("done"); 
             System.out.println("File " + file_path + " sent to " + client_name);
             // history_map.computeIfAbsent(client_name, k -> Collections.synchronizedList(new ArrayList<>())).add("Download: " + file_path + " at " + LocalDateTime.now().toString());
-            append_to_log(client_name, Color.GREEN + "Download: " + Color.RESET + partial_path + " at " + LocalDateTime.now().toString());
+            append_to_log(client_name, Color.GREEN + "Download: " + Color.RESET + partial_path + " at " + LocalDateTime.now().toString() + " Status: Successful");
             return "OK";
         } catch (IOException e) {
             System.out.println("Error sending file: " + e.getMessage());
+            append_to_log(client_name, Color.GREEN + "Download: " + Color.RESET + partial_path + " at " + LocalDateTime.now().toString() + " Status: Failed");
+
             try { socket.write(Color.RED+ "ERROR" + Color.RESET + ": Failed to download file."); } catch (IOException ignored) {}
             return "ERROR";
         }
@@ -257,35 +264,8 @@ public class Server {
         }
     }
 
-    public synchronized boolean isClientOnline(String client_name) {
-        return online_clients_map.containsKey(client_name);
-    }
-    
-    public synchronized void addOnlineClient(String client_name, SocketUtil socket) {
-        online_clients_map.put(client_name, socket);
-    }
-    
-    public synchronized boolean isRegisteredClient(String client_name) {
-        return clients.contains(client_name);
-    }
-    
-    public synchronized void registerNewClient(String client_name) throws IOException {
-        clients.add(client_name);
-        messages.putIfAbsent(client_name, new CopyOnWriteArrayList<>());
-        File file = new File("src/storage/" + client_name);
-        if(!file.exists()){
-            file.mkdir();
-            file = new File("src/storage/" + client_name + "/public");
-            file.mkdir();
-            file = new File("src/storage/" + client_name + "/private");
-            file.mkdir();
-            file = new File("src/storage/" + client_name + "/log.txt");
-            file.createNewFile();
-            System.out.println("Created directory for new client: " + client_name);
-        }
-    }
 
-    private synchronized void discardIncompleteUploadsForClient(String client_name) {
+    private synchronized void discard_incomplete_uploads(String client_name) {
         List<String> toRemove = new ArrayList<>();
         long freed_space = 0L;
         for (UploadSession s : uploadSessions.values()) {
@@ -307,7 +287,7 @@ public class Server {
     }
 
     public String close_client_connection(String client_name) {
-        discardIncompleteUploadsForClient(client_name);
+        discard_incomplete_uploads(client_name);
         online_clients_map.remove(client_name);
         System.out.println("Client " + client_name + " has been removed from online clients.");
         return "Connection closed for " + client_name;
@@ -315,9 +295,10 @@ public class Server {
     public boolean check_request_validity(String client_name, String request_id){
 
         for(FileRequest fr: file_request_list){  // copyOnWrite
-            if(fr.requestID.equals(request_id) && fr.recipient.equals(client_name)){
+            if(fr.requestID.equals(request_id) && (fr.recipient.equals(client_name) || fr.recipient.equals("all"))){
                 return true;
             }
+            
         }
         return false;
     }
@@ -382,17 +363,11 @@ public class Server {
 
         File tempFile = new File(upload_dir + "/.upload_" + fileID + ".tmp");
         UploadSession session = new UploadSession(fileID, client_name, filename, file_size, tempFile, random_chunk_size);
-        // session.fileID = fileID;
-        // session.uploader = client_name;
-        // session.filename = filename;
-        // session.expectedSize = file_size;
-        // session.receivedSize = 0;
-        // session.tempFile = tempFile;
-        // session.chunkSize = random_chunk_size;
+        
         uploadSessions.put(fileID, session);
         /////////////////
         try {
-            // tell client to start with chunk size and fileID
+            // client starts with chunk size and fileID
             sck.write("READY:" + random_chunk_size + ":" + fileID);
             System.out.println("Chunk Size:" + random_chunk_size + " fileID:" + fileID + " Client:" + client_name);
 
@@ -437,19 +412,16 @@ public class Server {
                 File finalFile = new File(upload_dir + "/" + filename);
                 if (finalFile.exists()) 
                     finalFile.delete();
-                // if there is a file of that name, we erase it first    
+                      
                 tempFile.renameTo(finalFile);
 
-                // synchronized (this) {
-                //     CUR_BUFFER_SIZE -= session.expectedSize; // empty buffer
-                // }
                 // auto thread safe
                 CUR_BUFFER_SIZE.addAndGet(-session.expectedSize);
                 
                 uploadSessions.remove(fileID);
                 sck.write("UPLOAD_SUCCESS");
                 // history_map.computeIfAbsent(client_name, k -> Collections.synchronizedList(new ArrayList<>())).add("Upload: " + p_name + " at " + LocalDateTime.now().toString());
-                append_to_log(client_name, Color.RED + "Upload: "+Color.RESET + p_name + " at " + LocalDateTime.now().toString());
+                append_to_log(client_name, Color.RED + "Upload: "+Color.RESET + p_name + " at " + LocalDateTime.now().toString() + " Status: Successful");
                 if(req){
                     String msg_rcpt= request_map.get(req_id);
                     String msg_text = "Your requested file (Request ID: " + req_id + ") has been uploaded as " + p_name;
@@ -465,11 +437,10 @@ public class Server {
                 fos.close();
                 if (tempFile.exists()) 
                     tempFile.delete(); // delete temp file to clear memory
-                // synchronized (this) {
-                //     CUR_BUFFER_SIZE -= session.expectedSize;
-                // }
+               
                 CUR_BUFFER_SIZE.addAndGet(-session.expectedSize);
                 uploadSessions.remove(fileID);
+                append_to_log(client_name, Color.RED + "Upload: "+Color.RESET + p_name + " at " + LocalDateTime.now().toString() + " Status: Failed");
                 sck.write(Color.RED + "UPLOAD_FAILED" + Color.RESET);
                 System.out.println("Upload failed (size mismatch or bad completion) for " + fileID);
                 return "ERROR: UPLOAD_FAILED";
@@ -497,15 +468,26 @@ public class Server {
         if(!registered){
             clients.add(client_name);
             messages.putIfAbsent(client_name, new CopyOnWriteArrayList<>());
-            File file = new File("src/storage/" + client_name);
-            if(!file.exists()){
-                file.mkdir();
-                file = new File("src/storage/" + client_name + "/public");
-                file.mkdir();
-                file = new File("src/storage/" + client_name + "/private");     
-                file.mkdir();
+
+            File baseDir = new File("src/storage");
+
+            if (!baseDir.exists()) {
+                baseDir.mkdirs();   // creates src/storage if missing
+            }
+
+            File clientDir = new File(baseDir, client_name);
+            if (!clientDir.exists()) {
+                new File(clientDir, "public").mkdirs();
+                new File(clientDir, "private").mkdirs();
+                File logFile = new File(clientDir, "log.txt");
+                try {
+                    logFile.createNewFile(); // creates only if not exists
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 System.out.println("Created directory for new client: " + client_name);
             }
+
             return 0; // registered
         }
         return 1;
