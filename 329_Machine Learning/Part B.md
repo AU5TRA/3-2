@@ -13,7 +13,6 @@ A model cannot directly understand words like `king`, `apple`, or `bank`; it nee
 - **Word order**
   - “body pieces are not interchangeable” vs. “body pieces are interchangeable” mean very different things
 
-These challenges are explicitly highlighted in the word embeddings lecture slides. fileciteturn0file1L54-L77
 
 ### When this matters
 This matters in almost every NLP system:
@@ -30,15 +29,15 @@ A representation that only memorizes exact words will usually fail on synonymy, 
 
 ## 2. Naive representation: one-hot vectors
 
-One of the annotated pages stresses the “naive approach”: represent each vocabulary word as a **one-hot vector**. If the vocabulary has size \(|V|\), then each word gets a \(|V|\)-dimensional vector with one 1 and the rest 0s. The handwritten note directly points out that the vector size becomes the vocabulary size, and that this does **not** capture family/relation/similarity between words. fileciteturn0file0L1-L18
+One of the annotated pages stresses the “naive approach”: represent each vocabulary word as a **one-hot vector**. If the vocabulary has size \(|V|\), then each word gets a \(|V|\)-dimensional vector with one 1 and the rest 0s. The handwritten note directly points out that the vector size becomes the vocabulary size, and that this does **not** capture family/relation/similarity between words. 
 
-The lecture slides also show that neural language models output a probability over the whole vocabulary, so vocabulary size is central to the computational cost. fileciteturn0file1L118-L130
+The lecture slides also show that neural language models output a probability over the whole vocabulary, so vocabulary size is central to the computational cost.
 
 ### Why one-hot is bad
 If `apple` and `orange` are both fruits, their one-hot vectors are still orthogonal.  
 So the model sees them as completely different symbols unless it learns everything from scratch.
 
-The annotations say essentially this in mixed Bangla-English: contextual similarity such as `apple` and `orange` cannot be expressed well with one-hot vectors. The notes also compare this to representing personality as numbers and then measuring similarity. fileciteturn0file0L1-L18
+The annotations say essentially this in mixed Bangla-English: contextual similarity such as `apple` and `orange` cannot be expressed well with one-hot vectors. The notes also compare this to representing personality as numbers and then measuring similarity. 
 
 ### Good choice?
 One-hot is okay only when:
@@ -60,7 +59,7 @@ The slide deck introduces **Bag of Words** for representing documents.
 It counts word occurrences but ignores structure. The slide explicitly lists two main drawbacks:
 
 - **High dimensionality**
-- **No semantic information** fileciteturn0file1L144-L149
+- **No semantic information** 
 
 ### Intuition
 A document becomes a big count vector:
@@ -90,28 +89,28 @@ The “document similarity?” slide makes exactly this point by comparing:
 - “Obama speaks to the media in Illinois”
 - “The President greets the press in Chicago”
 
-These documents may share little or no exact vocabulary, yet their meanings are related. fileciteturn0file1L150-L157
+These documents may share little or no exact vocabulary, yet their meanings are related. 
 
 ---
 
 ## 4. Semantic similarity and cosine similarity
 
 A central motivation in both files is:  
-put words into vectors so that **similar words have similar vectors**, and measure this with **cosine similarity**. The slides explicitly say “Put words into vectors so we can measure the similarity between words” and “Use cosine similarity.” fileciteturn0file1L158-L163
+put words into vectors so that **similar words have similar vectors**, and measure this with **cosine similarity**. The slides explicitly say “Put words into vectors so we can measure the similarity between words” and “Use cosine similarity.”
 
 The annotated article first explains this through a **personality vector** analogy:
 - represent a person as a vector of numeric traits
 - compare two people using cosine similarity
 - more dimensions usually give a richer comparison
 
-This is used to build intuition before moving to word vectors. fileciteturn0file0L19-L43 fileciteturn0file0L44-L60
+This is used to build intuition before moving to word vectors.
 
 ### Intuition
 Cosine similarity measures the angle between two vectors:
 - closer direction → more similar
 - opposite direction → less similar
 
-That is why `good` and `nice` can be close, while `bad` can point elsewhere in vector space, as shown in the slides. fileciteturn0file1L158-L163
+That is why `good` and `nice` can be close, while `bad` can point elsewhere in vector space, as shown in the slides. 
 
 ### Good choice?
 Cosine similarity is a good choice when:
@@ -129,9 +128,9 @@ Examples:
 
 ## 5. What word embeddings are
 
-The slide deck defines word embeddings as **vector representations of words that capture semantic relationships**. fileciteturn0file1L170-L175
+The slide deck defines word embeddings as **vector representations of words that capture semantic relationships**. 
 
-The annotated notes emphasize that a trained embedding is not manually designed feature engineering. Rather, the vector dimensions become **latent** properties learned from data. The notes also remark that although we cannot always interpret each dimension directly, the learned representation captures meaningful structure. fileciteturn0file0L61-L82
+The annotated notes emphasize that a trained embedding is not manually designed feature engineering. Rather, the vector dimensions become **latent** properties learned from data. The notes also remark that although we cannot always interpret each dimension directly, the learned representation captures meaningful structure.
 
 ### Key idea
 Instead of a sparse one-hot vector, each word gets a dense, low-dimensional vector like:
@@ -162,9 +161,9 @@ Examples:
 The slides say we need word embeddings because they provide:
 
 - **Numerical input**
-- **Similarity and distance information** fileciteturn0file1L164-L169
+- **Similarity and distance information** 
 
-The annotated notes reinforce this with the `king`, `man`, `woman` comparison and explicitly mention that trained embeddings capture closeness in a way one-hot cannot. fileciteturn0file0L61-L82
+The annotated notes reinforce this with the `king`, `man`, `woman` comparison and explicitly mention that trained embeddings capture closeness in a way one-hot cannot.
 
 ### Example
 If a model learns that `cat` and `kitten` are close, then knowledge about one may transfer to the other.  
@@ -180,7 +179,7 @@ Embeddings are a strong default whenever:
 
 ## 7. Language modeling: predict the next word
 
-The slides define **language modeling** as assigning probabilities to text and predicting the next word given the current text. They show the chain rule factorization of sequence probability. fileciteturn0file1L78-L89
+The slides define **language modeling** as assigning probabilities to text and predicting the next word given the current text. They show the chain rule factorization of sequence probability.
 
 The annotated notes pay special attention here. They describe next-token prediction using the example sentence “The quick brown fox jumps over …” and point out:
 
@@ -189,7 +188,7 @@ The annotated notes pay special attention here. They describe next-token predict
 - if vocabulary size is very large, the output layer is also very large
 - this motivates later efficiency improvements
 
-These ideas are also supported by the article’s discussion of neural language models producing probabilities over all vocabulary words. fileciteturn0file0L83-L113
+These ideas are also supported by the article’s discussion of neural language models producing probabilities over all vocabulary words. 
 
 ### Intuition
 Given:
@@ -213,11 +212,11 @@ Examples:
 
 ## 8. n-gram language models
 
-The slides introduce **n-gram models** as models that assume each word depends only on the previous \(n-1\) words. They count frequencies of n-grams and predict the next word from those counts. fileciteturn0file1L90-L107
+The slides introduce **n-gram models** as models that assume each word depends only on the previous \(n-1\) words. They count frequencies of n-grams and predict the next word from those counts.
 
 They also point out the core tradeoff:
 - larger \(n\) gives more context
-- but the counting table grows rapidly and becomes expensive/sparse fileciteturn0file1L108-L117
+- but the counting table grows rapidly and becomes expensive/sparse
 
 ### Intuition
 - unigram: use just single-word frequencies
@@ -242,7 +241,7 @@ They are weak when:
 - vocabulary is large
 - you want semantic generalization
 
-The Chomsky sentence discussion on the slide is there to provoke exactly that issue: a sentence can be grammatically plausible but statistically rare, or locally reasonable but globally odd. fileciteturn0file1L104-L107
+The Chomsky sentence discussion on the slide is there to provoke exactly that issue: a sentence can be grammatically plausible but statistically rare, or locally reasonable but globally odd.
 
 ---
 
@@ -250,14 +249,14 @@ The Chomsky sentence discussion on the slide is there to provoke exactly that is
 
 The slides explicitly motivate Word2Vec with the principle:
 
-> Similar words appear in similar contexts. fileciteturn0file1L179-L186
+> Similar words appear in similar contexts.
 
 They use the “Underberg” example:
 - “I love drinking Underberg after a meal.”
 - “Underberg is quite strong.”
 - “A few bottles of Underberg make me very drunk.”
 
-From context alone, we can infer that `Underberg` is probably some alcoholic drink. This is distributional semantics in action. fileciteturn0file1L179-L186
+From context alone, we can infer that `Underberg` is probably some alcoholic drink. This is distributional semantics in action. 
 
 ### Good choice?
 Word2Vec is a good choice when:
@@ -278,9 +277,9 @@ Examples:
 The slide deck highlights the two classic architectures:
 
 - **Skip-Gram**: use the center/target word to predict surrounding context words
-- **CBOW (Continuous Bag of Words)**: use surrounding context words to predict the center/target word fileciteturn0file1L206-L240
+- **CBOW (Continuous Bag of Words)**: use surrounding context words to predict the center/target word 
 
-The recap slide also summarizes this cleanly. fileciteturn0file1L240-L249
+The recap slide also summarizes this cleanly. 
 
 ### 10.1 Skip-Gram
 
@@ -294,9 +293,9 @@ Training samples become:
 - (`coffee`, `cup`)
 - (`coffee`, `of`)
 - (`coffee`, `is`)
-- (`coffee`, `on`) fileciteturn0file1L187-L205
+- (`coffee`, `on`) 
 
-The annotations also describe skip-gram in mixed Bangla-English: given a center word, predict surrounding words; this creates multiple training examples from one window. They also note that the original softmax over all vocabulary words is expensive. fileciteturn0file0L83-L113
+The annotations also describe skip-gram in mixed Bangla-English: given a center word, predict surrounding words; this creates multiple training examples from one window. They also note that the original softmax over all vocabulary words is expensive. 
 
 #### Good choice scenario for Skip-Gram
 Skip-Gram is often a good choice when:
@@ -314,9 +313,9 @@ Examples:
 CBOW reverses the direction:
 - use the surrounding words to predict the center word
 
-So from context words around `coffee`, predict `coffee`. The slides show this architecture directly. fileciteturn0file1L206-L240
+So from context words around `coffee`, predict `coffee`. The slides show this architecture directly. 
 
-The annotations label this as “Continuous Bag of Words → CBOW” and contrast it with skip-gram. fileciteturn0file0L83-L113
+The annotations label this as “Continuous Bag of Words → CBOW” and contrast it with skip-gram. 
 
 #### Good choice scenario for CBOW
 CBOW is a good choice when:
@@ -338,16 +337,16 @@ The slides walk through Skip-Gram as a small neural network:
 1. **Input one-hot vector** for the target word  
 2. Multiply by matrix **W** to select/get the word’s dense embedding  
 3. Multiply by **W′** and apply **softmax** over the vocabulary  
-4. Compare with the true context word using **cross-entropy loss** fileciteturn0file1L211-L229
+4. Compare with the true context word using **cross-entropy loss**
 
-One slide specifically asks what happens when a one-hot vector multiplies \(W\): it simply picks out the row for that target word. That row is the embedding of the word. fileciteturn0file1L218-L223
+One slide specifically asks what happens when a one-hot vector multiplies \(W\): it simply picks out the row for that target word. That row is the embedding of the word. 
 
 The annotations say the same thing in a more intuitive way:
 - one-hot input goes through a projection
 - the hidden layer is the embedding vector
 - then it is projected back to vocabulary size
 - cross-entropy loss is used
-- gradients update the embedding matrix fileciteturn0file0L83-L113
+- gradients update the embedding matrix 
 
 ### Why this is important
 This explains where embeddings come from:
@@ -364,9 +363,9 @@ This architecture is good pedagogically when:
 ## 12. Softmax bottleneck and why it is expensive
 
 The annotated pages pay special attention to a computational bottleneck:
-to predict a word over a vocabulary of size \(|V|\), the model needs an output score for every word, then softmax over all of them. The notes explicitly mention that when vocab is very large, this becomes time-consuming. fileciteturn0file0L83-L113
+to predict a word over a vocabulary of size \(|V|\), the model needs an output score for every word, then softmax over all of them. The notes explicitly mention that when vocab is very large, this becomes time-consuming.
 
-The article also states that the “project to output vocabulary” step is expensive because it must be done for huge numbers of training samples. fileciteturn0file0L153-L172
+The article also states that the “project to output vocabulary” step is expensive because it must be done for huge numbers of training samples.
 
 ### Why it hurts
 If \(|V| = 100,000\), each training step needs scoring across 100,000 candidates.
@@ -394,16 +393,16 @@ The article explains that instead of predicting the exact next/context word amon
 - given an **input word** and an **output word**
 - predict whether they are true neighbors (**1**) or not (**0**)
 
-This avoids the expensive full-vocabulary softmax. fileciteturn0file0L153-L195
+This avoids the expensive full-vocabulary softmax. 
 
 The annotated notes summarize this very directly:
 - don’t softmax across every token
 - use **sigmoid**
 - create binary labels 0/1
 - add **negative samples**
-- otherwise the model could trivially predict 1 for everything and learn nothing fileciteturn0file0L83-L113
+- otherwise the model could trivially predict 1 for everything and learn nothing
 
-The article then explains exactly that loophole and how negative examples fix it. fileciteturn0file0L173-L195
+The article then explains exactly that loophole and how negative examples fix it. 
 
 ### Intuition
 Positive example:
@@ -432,7 +431,7 @@ Examples:
 The article names the combination explicitly:
 - **Skip-Gram**
 - **Negative Sampling**
-- together → **SGNS** fileciteturn0file0L196-L222
+- together → **SGNS** 
 
 This is the classic practical Word2Vec recipe.
 
@@ -461,7 +460,7 @@ The annotated article highlights the famous analogy behavior:
 
 `king - man + woman ≈ queen`
 
-and explains that the nearest vector by cosine similarity is often `queen`. fileciteturn0file0L114-L133
+and explains that the nearest vector by cosine similarity is often `queen`.
 
 This does **not** mean embeddings understand human language perfectly.  
 It means certain relations become approximately linear in the learned vector space.
@@ -487,7 +486,7 @@ Do not rely only on analogies to evaluate embeddings for real tasks.
 The article notes that **window size** changes what “similarity” means:
 
 - smaller windows tend to capture **interchangeability**
-- larger windows tend to capture broader **relatedness** fileciteturn0file0L235-L244
+- larger windows tend to capture broader **relatedness** 
 
 ### Examples
 Small window:
@@ -509,7 +508,7 @@ Choose a larger window when:
 
 ## 17. Document similarity and Word Mover’s Distance
 
-The slides introduce **Word Mover’s Distance (WMD)** as a way to measure similarity between documents using distances in word embedding space. fileciteturn0file1L230-L233
+The slides introduce **Word Mover’s Distance (WMD)** as a way to measure similarity between documents using distances in word embedding space. 
 
 ### Intuition
 Instead of exact word overlap, ask:
@@ -538,13 +537,13 @@ The slides generalize the idea into “X2vec”:
 - Doc2Vec
 - Node2Vec
 - Item2Vec
-- Sent2Vec fileciteturn0file1L234-L239
+- Sent2Vec
 
 ### Core idea
 You can often learn embeddings for any entity if you can define a notion of **context** or **co-occurrence**.
 
 ### Example scenarios
-- **Doc2Vec**: represent a paragraph/document for classification or retrieval fileciteturn0file1L240-L243
+- **Doc2Vec**: represent a paragraph/document for classification or retrieval
 - **Node2Vec**: graph node embeddings from graph neighborhoods
 - **Item2Vec**: recommendation from co-purchased or co-viewed items
 - **Sent2Vec**: sentence-level representation
@@ -562,7 +561,7 @@ The slides explicitly mention several limitations:
 3. **Bias**
    - embeddings can capture societal biases
 4. **Time dependence**
-   - meaning changes over time fileciteturn0file1L244-L247 fileciteturn0file1L235-L245
+   - meaning changes over time 
 
 ### Why this matters
 A static embedding gives one vector per word type, not per usage.
@@ -588,12 +587,12 @@ After static word embeddings, the slides transition to **RNNs**.
 The recap slide says RNNs:
 - have an internal state (memory)
 - can handle arbitrary sequences of inputs
-- are trained with backpropagation through time fileciteturn0file1L240-L249
+- are trained with backpropagation through time
 
 The later slides motivate parameter sharing across timesteps because otherwise:
 - too many parameters are needed
 - long sequences become hard to train
-- variable-length sequences are awkward fileciteturn0file1L248-L254
+- variable-length sequences are awkward 
 
 ### Why this transition matters
 Static embeddings give you a vector per word.  
@@ -619,21 +618,21 @@ A few especially important annotation-driven takeaways from the handwritten note
 
 ### a) “One-hot is too sparse”
 The notes stress that one-hot vectors become huge and do not encode similarity.  
-This is one of the biggest motivations for embeddings. fileciteturn0file0L1-L18
+This is one of the biggest motivations for embeddings.
 
 ### b) “Think in terms of similarity”
 The notes repeatedly relate word vectors to personality vectors and cosine similarity.  
-That is a very good intuition: embeddings are useful because similar things become numerically close. fileciteturn0file0L19-L43
+That is a very good intuition: embeddings are useful because similar things become numerically close. 
 
 ### c) “The hidden layer is the embedding”
-In the Skip-Gram architecture notes, the middle projection is essentially the learned dense representation. fileciteturn0file1L211-L223 fileciteturn0file0L83-L113
+In the Skip-Gram architecture notes, the middle projection is essentially the learned dense representation.
 
 ### d) “Softmax over full vocab is the bottleneck”
-This is one of the most emphasized handwritten remarks, and it directly motivates negative sampling. fileciteturn0file0L83-L113
+This is one of the most emphasized handwritten remarks, and it directly motivates negative sampling. 
 
 ### e) “Need negative samples”
 The notes explain that if you only train on positive neighbors, the model can cheat.  
-So negative examples are necessary to make the task meaningful. fileciteturn0file0L173-L195
+So negative examples are necessary to make the task meaningful.
 
 ---
 
