@@ -689,10 +689,3 @@ The uploaded slides and annotations together build a very clear story:
 8. That limitation motivates later sequence/contextual models like **RNNs** and, beyond this lecture, transformers.
 
 ---
-
-## Source note
-
-This explanation was prepared from the two uploaded PDFs:
-
-- `1. Embedding.pdf` — annotated Word2Vec/embedding intuition and training notes  
-- `2. Word_embeddings.pdf` — lecture slides on language modeling, Word2Vec, and RNNs
