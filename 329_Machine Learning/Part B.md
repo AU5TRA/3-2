@@ -899,3 +899,392 @@ That progression is one of the key historical paths in NLP.
 - SGNS is an efficient and important training method.
 - Word2Vec is static and cannot fully handle multiple meanings of a word.
 - RNNs extend the story to sequence modeling with shared parameters across timesteps.
+
+
+---
+
+
+# Word Embeddings and RNNs — concise notes
+
+## Why text is harder than images
+Text is tricky because:
+- sentences have **variable length**
+- the same word can mean different things in different contexts
+- similar meaning may appear with different words
+- word order matters a lot
+
+So a plain fixed-size representation like simple counts is often not enough.
+
+## Bag of Words
+Bag of Words represents a document by counting how many times each vocabulary word appears.
+
+### Why it can help
+- simple
+- easy to implement
+- often works for baseline document classification
+
+### Main limitation
+It ignores meaning and order. Two sentences can mean similar things even if they share few or no exact words.
+
+### Good choice when
+Use it for a **quick baseline** such as spam detection, topic classification, or small document classification tasks where interpretability and simplicity matter more than deep semantics.
+
+---
+
+## Language modeling
+A language model estimates how likely a sequence of words is, or predicts the next word from previous words.
+
+Example idea:
+- given: `I am very thirsty, I want to drink ...`
+- likely next words: `water`, `juice`, `orange juice`
+
+The important point is: the model should use **context**, not just treat each word independently.
+
+### Good choice when
+Use language modeling for:
+- next-word prediction keyboards
+- text generation
+- spelling or autocomplete systems
+- as a training objective for learning useful text representations
+
+---
+
+## n-gram language models
+An n-gram model assumes the next word depends only on the last `n-1` words.
+
+Examples:
+- unigram: one word at a time
+- bigram: pairs
+- trigram: triples
+
+### Strength
+- simple and intuitive
+- works when context is short and data is limited
+
+### Weakness
+- larger `n` gives more context but the table grows very fast
+- sparse counts become a problem
+- does not generalize well to unseen phrases
+
+### Good choice when
+Use n-grams for **small classical NLP tasks**, teaching, or when you want a lightweight baseline without neural training.
+
+---
+
+## Word embeddings
+A word embedding is a dense vector representation of a word. Instead of one-hot vectors of size equal to vocabulary size, each word gets a much smaller learned vector.
+
+### Why embeddings matter
+One-hot encoding only says **which word** it is. It does **not** show similarity.
+Embeddings try to place similar words near each other in vector space.
+
+So words like `king`, `queen`, `man`, `woman` can end up with structured geometric relationships.
+
+### Similarity
+A common similarity measure is **cosine similarity**.
+- higher cosine similarity means vectors point in similar directions
+- this often means the words are used in similar contexts
+
+### Good choice when
+Use word embeddings when you want a model to understand that words can be **related or interchangeable in context**, such as:
+- sentiment analysis
+- search and retrieval
+- recommendation from sequential behavior
+- clustering similar words/documents
+
+---
+
+## Why one-hot alone is not enough
+If vocabulary size is huge, a one-hot vector is also huge. That makes learning expensive, and two related words still look completely different.
+
+Example:
+- `apple` and `orange` may appear in similar contexts
+- but their one-hot vectors are orthogonal, so they look equally unrelated as `apple` and `democracy`
+
+Dense embeddings solve this by learning compact vectors where similarity can be measured.
+
+---
+
+## Word2Vec intuition
+Word2Vec learns vectors from context. The central idea is:
+
+> words appearing in similar contexts should get similar vectors.
+
+If a rare word appears in sentences like:
+- `I love drinking Underberg after a meal`
+- `Underberg is quite strong`
+- `A few bottles of Underberg made me drunk`
+
+then even without a dictionary definition, the model can infer it is probably an alcoholic drink.
+
+### Good choice when
+Use Word2Vec when you want **static word vectors** learned from large unlabeled text and need something efficient and interpretable.
+
+---
+
+## Skip-gram and CBOW
+These are the two classic Word2Vec training styles.
+
+### CBOW
+CBOW predicts the **target word from surrounding context words**.
+
+Example:
+- context: `the`, `brown`, `fox`, `over`
+- predict: `quick` or `jumps`, depending on position
+
+#### Good choice when
+CBOW is often a good choice when training speed matters and the dataset is large enough.
+
+### Skip-gram
+Skip-gram predicts the **surrounding context words from the center word**.
+
+Example:
+- center word: `coffee`
+- predict nearby words: `cup`, `of`, `is`, `on`
+
+#### Good choice when
+Skip-gram is often better when you care about representing **rare words** more well.
+
+---
+
+## Word2Vec architecture intuition
+The input is usually a one-hot word vector.
+Multiplying a one-hot vector by the embedding matrix simply selects that word’s embedding row/column.
+
+Then the model produces scores for vocabulary words.
+A **softmax** layer converts those scores into probabilities.
+The training loss is typically **cross-entropy**.
+
+### Important practical point
+Softmax over the full vocabulary can be expensive when the vocabulary is very large.
+That becomes a major bottleneck.
+
+---
+
+## Negative sampling
+Negative sampling is a faster training trick.
+Instead of predicting a full probability distribution over the entire vocabulary every time, the model learns to answer a simpler question:
+
+- is this word pair a real neighbor? → `1`
+- or just a random pair? → `0`
+
+So for a positive pair like `(coffee, cup)`, we may also create negative pairs like `(coffee, democracy)` or `(coffee, airplane)`.
+
+This turns the problem into several small binary decisions, usually with **sigmoid**, instead of one giant softmax.
+
+### Why it helps
+- much faster than full softmax
+- works well in practice
+- especially useful for large vocabularies
+
+### Good choice when
+Use skip-gram with negative sampling when you want efficient training of embeddings on a large corpus.
+
+---
+
+## Window size intuition
+The context window controls how many neighboring words are considered.
+
+### Smaller window
+Captures more local usage. Often better for words that are close substitutes in similar sentence positions.
+
+### Larger window
+Captures broader topic-level relatedness.
+
+### Good choice when
+- use a **small window** for syntactic similarity or near-substitutable words
+- use a **larger window** for semantic relatedness or topic association
+
+---
+
+## Limits of Word2Vec
+Word2Vec gives **one vector per word**.
+That causes a problem for polysemy.
+
+Example:
+- `bank` of a river
+- `bank` for money
+
+Both senses get merged into one vector.
+So static embeddings are useful, but limited.
+
+---
+
+## Why RNNs are needed
+A fixed-size feedforward setup is awkward for sequence data because:
+- input length can vary
+- output length can vary
+- earlier tokens may matter later
+- the same operation should apply repeatedly across positions
+
+An RNN solves this by keeping an **internal hidden state** that gets updated one token at a time.
+
+---
+
+## Core RNN idea
+At time step `t`, the RNN uses:
+- the current input `x_t`
+- the previous hidden state `h_(t-1)`
+
+and produces a new hidden state `h_t`.
+
+That hidden state acts like a running summary of the sequence seen so far.
+
+In simple terms:
+- current token gives new information
+- previous hidden state carries past context
+- new hidden state mixes both
+
+This is why RNNs are natural for text.
+
+### Good choice when
+Use an RNN when the order of elements matters and you need a compact running memory, for example:
+- sequence classification
+- character-level language modeling
+- time-series prediction
+- simple captioning or sequence generation setups
+
+---
+
+## Why parameter sharing matters in RNNs
+If every position had its own separate weights, long sequences would require too many parameters and many of those parameters would barely get trained.
+
+RNNs use the **same weights at every time step**.
+That gives:
+- fewer parameters
+- ability to handle variable-length inputs
+- symmetry across positions
+
+This is a major reason RNNs are suitable for sequential data.
+
+---
+
+## Common input-output patterns of RNNs
+### One-to-many
+One input produces a sequence.
+Example: image captioning.
+
+### Many-to-one
+A sequence produces one output.
+Example: sentiment classification of a sentence.
+
+### Many-to-many
+A sequence produces another sequence.
+Example: video captioning or sequence labeling.
+
+### Sequence-to-sequence
+One sequence is encoded, then another sequence is decoded.
+Example: machine translation.
+
+---
+
+## Character-level language model
+Instead of words, the model works at the character level.
+It predicts one character at a time and feeds the prediction back in to generate the next one.
+
+### Good choice when
+Use character-level modeling when:
+- vocabulary is small
+- spelling structure matters
+- you want robustness to unknown words
+- you are modeling code, names, or noisy text
+
+---
+
+## Backpropagation Through Time (BPTT)
+To train an RNN, we unroll it over time and backpropagate through all those steps.
+This is called **Backpropagation Through Time**.
+
+### Truncated BPTT
+For very long sequences, we often backpropagate only through smaller chunks.
+This reduces cost while still letting hidden states move forward.
+
+### Good choice when
+Use truncated BPTT when full sequences are too long to train efficiently.
+
+---
+
+## Main weakness of vanilla RNNs
+Vanilla RNNs struggle with long-range dependencies.
+During backpropagation, gradients are repeatedly multiplied over many time steps.
+That can cause:
+- **vanishing gradients**: signal becomes too small, old information is hard to learn
+- **exploding gradients**: signal becomes too large, training becomes unstable
+
+### Practical fix for exploding gradients
+Use **gradient clipping**.
+
+### But vanishing gradients needs more
+Usually we change the architecture.
+
+---
+
+## LSTM intuition
+LSTM is a redesigned RNN that makes long-term information flow easier.
+It introduces a **cell state** and several gates:
+- input gate: how much new information to write
+- forget gate: how much old information to keep or erase
+- output gate: how much to reveal
+
+The key advantage is that information can move along a more additive path, which helps gradient flow much better than plain repeated matrix multiplication.
+
+### Important nuance
+LSTM does not magically remove all gradient problems, but it makes long-distance dependency learning much easier than vanilla RNN.
+
+### Good choice when
+Use LSTM when:
+- sequence dependencies are long
+- vanilla RNN training is unstable or forgetful
+- you need a stronger sequential baseline than a simple RNN
+
+---
+
+## GRU
+GRU is another gated recurrent architecture, usually simpler than LSTM.
+It often performs competitively while using fewer gates.
+
+### Good choice when
+Use GRU when you want something simpler and often faster than LSTM, but stronger than vanilla RNN.
+
+---
+
+## Where these models are good choices
+### Bag of Words
+- fast document baseline
+- simple classification tasks
+
+### n-gram LM
+- short-context prediction baseline
+- teaching/prototyping
+
+### Word2Vec / embeddings
+- semantic similarity
+- search, clustering, recommendation
+- initializing downstream NLP models
+
+### CBOW
+- faster embedding training
+
+### Skip-gram + negative sampling
+- better rare-word handling, efficient large-corpus training
+
+### Vanilla RNN
+- educational baseline for sequences
+- simple sequence tasks
+
+### LSTM / GRU
+- longer dependencies
+- practical sequence modeling
+- text generation, sentiment, captioning, translation baselines
+
+---
+
+## Final takeaway
+A useful progression is:
+1. **Bag of Words / n-grams** for simple baselines
+2. **Word embeddings / Word2Vec** for meaning-aware word representations
+3. **RNNs** for ordered sequences with memory
+4. **LSTM/GRU** when plain RNN cannot carry context far enough
+
+The main theme is simple: in language, meaning usually lives not in isolated words, but in **context, order, and sequential dependence**.
+
