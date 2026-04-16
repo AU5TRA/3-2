@@ -286,6 +286,81 @@ Vanilla RNNs struggle with long-range dependencies because gradients can:
 
 ---
 
+
+# RNN Training and Gradient Flow
+
+## 1. Memory in BPTT
+
+During RNN training with Backpropagation Through Time (BPTT), you must store all hidden states $h_0, h_1, \ldots, h_T$ because the backward pass needs them. So memory grows as:
+
+$$\text{Memory} \propto T$$
+
+- Longer sequence ⇒ more context available
+- But also ⇒ harder training + more memory
+
+---
+
+## 2. Truncated BPTT
+
+If you do full BPTT over a long sequence, you process all tokens and then update weights. For large $T$, updates are very infrequent, which leads to slow learning.
+
+### Solution: Truncated BPTT
+
+Instead of backpropagating through 1000 steps at once, we:
+
+1. Backpropagate through 100 steps
+2. Update weights
+3. Pass hidden state forward
+4. Repeat
+
+### How it helps
+
+- Less memory usage
+- More frequent weight updates
+- Faster convergence
+
+---
+
+## 3. Residual Connection Analogy (Deep CNN → ResNet)
+
+In a deep CNN, gradients can shrink as they travel backward. ResNet addresses this with the residual connection:
+
+$$\text{output} = f(x) + x$$
+
+Even if the nonlinear path $f'(x)$ kills the gradient, the identity path preserves it:
+
+$$\frac{d}{dx}(f(x) + x) = f'(x) + 1$$
+
+This is analogous to why LSTM's additive cell-state update helps gradient flow in RNNs.
+
+---
+
+## Problems with RNNs
+
+- Memory grows with sequence length
+- Updates are delayed → slow training
+- Gradients vanish across long time steps
+- Long-range dependencies are not learned effectively
+
+---
+
+## Solutions
+
+### 1. Truncated BPTT
+- Faster weight updates
+- Less memory
+- Produces approximate (not exact) gradients
+
+### 2. Mini-batch Training
+- More frequent updates
+- Faster convergence
+
+### 3. Residual-style Thinking (Analogy)
+- Helps understand why LSTM is needed
+- Additive paths preserve gradient flow, just like skip connections in ResNets
+
+---
+
 ## LSTM intuition
 LSTM is a gated version of RNN designed to preserve information better over long sequences.
 
