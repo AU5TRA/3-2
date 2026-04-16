@@ -393,6 +393,92 @@ LSTM keeps both a hidden state and a cell state, and uses gates to control forge
 
 This gated additive update makes LSTMs much better at handling longer dependencies than vanilla RNNs.
 
+If the forget gates were exactly 1, then:
+
+$$c_t = c_{t-1} + \text{new stuff}$$
+
+and
+
+$$\frac{\partial c_t}{\partial c_{t-1}} = 1$$
+
+So the gradient could pass backward unchanged along that path. That would be truly uninterrupted.
+
+But in practice:
+
+$$f_t \in (0, 1)$$
+
+because it is produced by a sigmoid. So the gradient is actually multiplied by $f_t$ at each step. Thus the path is not perfectly constant unless the forget gate stays very close to 1.
+
+So the better statement is:
+
+- LSTM provides a much easier path for gradient flow
+- It can preserve gradients for long durations
+- But it does not guarantee a perfectly unchanged gradient forever
+
+At each time step:
+
+- The **forget gate** decides how much old information to keep
+- The **input gate** decides how much new information to write
+- The **output gate** decides how much of the cell content to expose as hidden state
+
+Because the cell state mostly carries information forward directly, the backward gradient also has a cleaner route backward. That is the main reason LSTMs can remember information over much longer spans than vanilla RNNs.
+
+---
+
+## Does LSTM solve the vanishing gradient problem?
+
+It **greatly reduces** it, but does **not completely eliminate** it. This is the correct answer.
+
+### Why it helps
+
+The cell-state path avoids repeated multiplication by a full recurrent matrix and repeated squashing nonlinearities in the long-term memory path. If the forget gate stays near 1, then:
+
+$$\frac{\partial c_t}{\partial c_{t-1}} \approx 1$$
+
+and gradients can survive for many steps. This is why LSTMs are much better than vanilla RNNs at learning long-term dependencies.
+
+### Why it does not fully solve it
+
+If the forget gates are consistently less than 1, say $f_t \approx 0.8$, then over many steps:
+
+$$0.8^{100}$$
+
+is tiny. So gradients can still vanish eventually.
+
+Also, gradients going through the gates and through the hidden state still pass through sigmoids and tanh, which can saturate.
+
+So LSTM **mitigates** vanishing gradients strongly, but does not mathematically abolish them in every circumstance.
+
+---
+
+## Does LSTM solve the exploding gradient problem?
+
+**Not completely.** LSTM helps stability, but exploding gradients can still happen.
+
+### Why exploding is less severe than in vanilla RNN
+
+The cell-state path is more controlled. The additive structure is more stable than repeated multiplication by a recurrent matrix. Also, forget gates are bounded between 0 and 1, so along the direct cell-state path, you do not get uncontrolled growth from that term alone.
+
+### But exploding can still happen
+
+The overall network still contains:
+
+- Matrix multiplications for the gates
+- Hidden-to-hidden dependencies
+- Backpropagation through many steps
+- Output layers and other transformations
+
+So the total gradient in the whole model can still become large. That is why in practice people still use:
+
+- **Gradient clipping**
+- **Careful initialization**
+- **Proper learning rates**
+
+with LSTMs.
+
+So LSTM does **not** fully solve exploding gradients either.
+
+
 ---
 
 ## GRU
