@@ -303,6 +303,96 @@ LSTM does not magically remove all training problems, but it makes long-distance
 ### Good choice when
 Use LSTM when vanilla RNN forgets important earlier context.
 
+
+# Vanilla RNN vs LSTM
+
+## Vanilla RNN
+At time step \(t\), a vanilla RNN uses:
+
+- current input vector \(x_t\)
+- previous hidden state \(h_{t-1}\)
+
+These are concatenated, multiplied by a weight matrix, then passed through a nonlinearity to produce the next hidden state:
+
+$$
+h_t = \tanh\!\big(W [x_t ; h_{t-1}] + b\big)
+$$
+
+So \(h_t\) is the new summary of the past plus the current input.
+
+### Limitation
+Because information must pass through repeated matrix multiplications across time, vanilla RNNs often struggle with long-term dependencies.
+
+---
+
+## LSTM
+An LSTM uses:
+
+- current input \(x_t\)
+- previous hidden state \(h_{t-1}\)
+- previous cell state \(c_{t-1}\)
+
+First, \(x_t\) and \(h_{t-1}\) are stacked and passed through one large linear layer.  
+This produces four vectors:
+
+- input gate: \(i_t\)
+- forget gate: \(f_t\)
+- output gate: \(o_t\)
+- candidate gate: \(g_t\)
+
+A compact form is:
+
+$$
+[i_t, f_t, o_t, g_t] = W [x_t ; h_{t-1}] + b
+$$
+
+Then nonlinearities are applied:
+
+$$
+i_t = \sigma(i_t), \qquad
+f_t = \sigma(f_t), \qquad
+o_t = \sigma(o_t), \qquad
+g_t = \tanh(g_t)
+$$
+
+Usually these gate vectors have the same size as the hidden state.
+
+---
+
+## Cell state update
+The LSTM cell state is updated by:
+
+$$
+c_t = f_t \odot c_{t-1} + i_t \odot g_t
+$$
+
+where \(\odot\) means elementwise multiplication.
+
+Interpretation:
+
+- \(f_t\): how much of the old cell state to keep
+- \(i_t\): whether to write new information
+- \(g_t\): what new information to write
+
+---
+
+## Hidden state update
+After updating the cell state, the hidden state is:
+
+$$
+h_t = o_t \odot \tanh(c_t)
+$$
+
+So the output gate controls how much of the cell state is revealed.
+
+---
+
+## Main idea
+Vanilla RNN keeps only a hidden state.  
+LSTM keeps both a hidden state and a cell state, and uses gates to control forgetting, writing, and revealing information.
+
+This gated additive update makes LSTMs much better at handling longer dependencies than vanilla RNNs.
+
 ---
 
 ## GRU
