@@ -583,43 +583,19 @@ These ideas are closely connected, but the word **kernel** is used in more than 
 ---
 ## 1. What is a kernel in a CNN?
 
-A kernel is a small matrix of weights.
+A kernel is a small matrix of weights. For example, a `3x3` kernel might look like this:
 
-For example, a `3x3` kernel might look like this:
+$$K = \begin{bmatrix} -1 & 0 & 1 \\ -1 & 0 & 1 \\ -1 & 0 & 1 \end{bmatrix}$$
 
-\[
-K =
-\begin{bmatrix}
--1 & 0 & 1 \\
--1 & 0 & 1 \\
--1 & 0 & 1
-\end{bmatrix}
-\]
+This kernel is placed over a small patch of the image, and the network computes a weighted sum between the kernel and that patch. If the patch is
 
-This kernel is placed over a small patch of the image, and the network computes a weighted sum between the kernel and that patch.
-
-If the patch is
-
-\[
-P =
-\begin{bmatrix}
-2 & 3 & 7 \\
-1 & 4 & 8 \\
-0 & 2 & 9
-\end{bmatrix}
-\]
+$$P = \begin{bmatrix} 2 & 3 & 7 \\ 1 & 4 & 8 \\ 0 & 2 & 9 \end{bmatrix}$$
 
 then the response is:
 
-\[
-(-1)(2) + 0(3) + 1(7)
-+ (-1)(1) + 0(4) + 1(8)
-+ (-1)(0) + 0(2) + 1(9)
-\]
+$$(-1)(2) + 0(3) + 1(7) + (-1)(1) + 0(4) + 1(8) + (-1)(0) + 0(2) + 1(9)$$
 
-A large positive or negative value means the patch matches the pattern the kernel is looking for.
-
-So a kernel is basically a **small pattern detector**.
+A large positive or negative value means the patch matches the pattern the kernel is looking for. So a kernel is basically a **small pattern detector**.
 
 ---
 
