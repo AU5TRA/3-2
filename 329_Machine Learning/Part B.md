@@ -581,7 +581,6 @@ A CNN works well for images because it is built to recognize local visual patter
 These ideas are closely connected, but the word **kernel** is used in more than one way in machine learning and signal processing. In CNNs, a **kernel** usually means a small learnable filter such as `3x3` or `5x5`.
 
 ---
-
 ## 1. What is a kernel in a CNN?
 
 A kernel is a small matrix of weights.
@@ -786,9 +785,7 @@ Each spatial location says **where**
 
 So in a feature tensor:
 
-\[
-H \times W \times C
-\]
+$$H \times W \times C$$
 
 - `H x W` tells where
 - `C` tells what kind of feature
