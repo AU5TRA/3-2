@@ -463,6 +463,12 @@ So the output gate controls how much of the cell state is revealed.
 ---
 
 ## Main idea
+An LSTM cell has an internal memory that can persist over time.
+
+Unlike a vanilla RNN, where the new state is just a nonlinear transformation of the old one, LSTM has a special memory path with a recurrence on itself.
+
+That self-recurrent connection is the important part: it means the cell can carry information from one time step to the next with less distortion.
+
 Vanilla RNN keeps only a hidden state.  
 LSTM keeps both a hidden state and a cell state, and uses gates to control forgetting, writing, and revealing information.
 
@@ -500,6 +506,61 @@ Because the cell state mostly carries information forward directly, the backward
 
 ---
 
+# Activation Functions in LSTM
+
+## Why Sigmoid for Gates?
+
+A gate should behave like a **soft switch**. Sigmoid gives:
+
+$$\sigma(z) \in (0, 1)$$
+
+So its output can be interpreted as:
+
+| Output | Meaning |
+|--------|---------|
+| $0$ | Block almost everything |
+| $1$ | Pass almost everything |
+| $0.3$ | Pass a little |
+| $0.8$ | Pass most of it |
+
+That is exactly what a gate needs. So in LSTM:
+
+- **Forget gate** $f_t$: how much old memory to keep
+- **Input gate** $i_t$: how much new information to write
+- **Output gate** $o_t$: how much memory to reveal
+
+All of these are naturally "percentage-like" quantities, so sigmoid fits well.
+
+---
+
+## Why Tanh for Memory Content?
+
+Now consider the candidate memory $\tilde{C}_t$. This is not a gate — it is the new content the model might want to store. For that, we use tanh because:
+
+$$\tanh(z) \in (-1, 1)$$
+
+So it can represent:
+
+- **Positive** information
+- **Negative** information
+- **Near-zero** information
+
+This is useful because memory content is not just "how much." It can have **direction and sign**.
+
+### Why Not Sigmoid Here?
+
+If we used sigmoid for candidate memory, the stored value would always be between $0$ and $1$. That is too restrictive — memory often needs to encode richer information, including opposite effects. Tanh allows that.
+
+---
+
+## Summary
+
+| Role | Activation | Range | Reason |
+|------|-----------|-------|--------|
+| Gate strength | $\sigma$ | $(0, 1)$ | Acts as a soft on/off switch |
+| Memory content | $\tanh$ | $(-1, 1)$ | Encodes direction and magnitude |
+
+---
 ## Does LSTM solve the vanishing gradient problem?
 
 It **greatly reduces** it, but does **not completely eliminate** it. This is the correct answer.
@@ -556,14 +617,111 @@ So LSTM does **not** fully solve exploding gradients either.
 
 ---
 
-## GRU
-GRU is another gated recurrent model, simpler than LSTM in structure and often competitive in practice.
+# GRU (Gated Recurrent Unit)
 
-### Good choice when
-Use GRU when you want something lighter than LSTM but stronger than vanilla RNN.
+## LSTM vs GRU
+
+| | LSTM | GRU |
+|---|---|---|
+| States | Separate cell state $c_t$ and hidden state $h_t$ | Single hidden state $h_t$ |
+| Gates | 3 (forget, input, output) | 2 (update, reset) |
+| Complexity | Higher | Lower |
+| Parameters | More | Fewer |
+
+- **LSTM**: more components, more explicit memory control
+- **GRU**: simpler design, fewer gates, one combined state
+
+### Activation functions in GRU
+
+- $\sigma$ → update gate
+- $\sigma$ → reset gate
+- $\tanh$ → candidate hidden content
 
 ---
 
+## When to Choose GRU
+
+GRU is often preferred when:
+
+- The dataset is not huge
+- You want a simpler recurrent model
+- Fewer parameters than LSTM are desirable
+- Latency or compute budget is a concern
+
+---
+
+## What GRU Can Do
+
+### 1. Keep Useful Past Information
+
+The **update gate** $z_t$ decides how much of the previous hidden state should survive into the new state. If past context is important, GRU can preserve it.
+
+### 2. Ignore Irrelevant Past Information
+
+The **reset gate** $r_t$ decides how much of the previous hidden state to use while creating the candidate memory $\tilde{h}_t$. This lets the network drop outdated context.
+
+### 3. Handle Long-Range Dependencies Better
+
+Because the hidden state update is partly additive:
+
+$$h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t$$
+
+the model can preserve information more stably across time than a vanilla RNN.
+
+- When $z_t \approx 0$: the old hidden state $h_{t-1}$ is mostly kept
+- When $z_t \approx 1$: the new candidate $\tilde{h}_t$ mostly replaces it
+
+---
+
+# Bidirectional RNN (Bi-RNN)
+
+## What is a Bi-RNN?
+
+A standard RNN processes a sequence in one direction — typically left to right:
+
+$$x_1 \to x_2 \to x_3 \to \cdots$$
+
+So the hidden state at position $t$ uses only **past** context.
+
+A Bi-RNN runs **two RNNs in parallel**:
+
+- **Forward RNN**: processes left to right
+- **Backward RNN**: processes right to left
+
+For each position, the two hidden states are combined. So for token $x_t$, the model can use:
+
+- Past context from the forward RNN
+- Future context from the backward RNN
+
+---
+
+## Why Do We Need Bi-RNN?
+
+Because sometimes the meaning of a token depends on **future context**, not just previous context.
+
+### Example: Word Sense Ambiguity
+
+Consider the word *"mouse"* — its meaning depends on the words that follow:
+
+- *"The mouse clicked..."* → computer mouse
+- *"The mouse scurried..."* → animal
+
+A left-to-right RNN cannot resolve this ambiguity at the position of *"mouse"*, because the clarifying context comes later. A Bi-RNN can, because the backward pass has already seen those future words.
+
+---
+
+## Tasks Where Bi-RNN Helps
+
+Bidirectional context is especially important for token-level tasks where each word's label depends on surrounding words:
+
+- **Named entity recognition**
+- **Part-of-speech tagging**
+- **Word sense disambiguation**
+- **Sentence classification**
+- **Sarcasm detection**
+- **Sentiment analysis**
+
+---
 ## Where each method is a good choice
 
 ### Bag of Words
