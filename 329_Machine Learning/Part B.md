@@ -86,7 +86,7 @@ They let similar words stay close in vector space. That means the model can lear
 ### Cosine similarity
 Similarity between embeddings is often measured using **cosine similarity**:
 - higher cosine similarity means vectors point in similar directions
-- this usually means similar usage/context
+- words that appear in similar contexts get similar vectors.
 
 ### Good choice when
 Use embeddings when meaning, similarity, or transfer to downstream NLP tasks matters.
@@ -110,20 +110,30 @@ Use Word2Vec when you want efficient static word vectors from large unlabeled te
 ## CBOW and Skip-gram
 
 ### CBOW
-CBOW predicts the center word from surrounding context words.
-
-### Good choice when
-Use CBOW when training speed matters and you want a strong practical baseline.
+CBOW(Continuous Bag of Words) predicts the center word from surrounding context words.
+- Use CBOW when training speed matters and you want a strong practical baseline.
 
 ### Skip-gram
 Skip-gram predicts surrounding context words from the center word.
+- Use skip-gram when rare-word representation matters more.
 
 Example:
 - center word: `coffee`
 - nearby targets: `cup`, `of`, `is`, `on`
 
-### Good choice when
-Use skip-gram when rare-word representation matters more.
+Flow:
+w_t
+(center word)
+   →   x (one-hot, |V|×1)
+   →    h = W^T x
+       \[hidden vector/ embedding, M×1]
+   →    u = W'^T h
+       \[score all vocabs, |V|×1]
+   →   ŷ = softmax(u)
+       \[predicted context distribution]
+   →   L = -log ŷ_c
+       \[loss for true context word w_c]
+   →   update W, W'
 
 ---
 
@@ -136,22 +146,21 @@ Use skip-gram when rare-word representation matters more.
 
 So the hidden layer is really the learned embedding.
 
-### Important practical issue
+**Important practical issue**
 The expensive part is the output side, because softmax over the whole vocabulary can be very costly.
 
 ---
 
-## Cross-entropy loss
+### Cross-entropy loss
 When the correct target word is known, the predicted probability distribution is compared with the true one-hot target using **cross-entropy**.
 
 If the correct word gets high probability, loss becomes low.
 
-### Good choice when
-Use cross-entropy when one correct class should be selected from many vocabulary options.
+- Use cross-entropy when one correct class should be selected from many vocabulary options.
 
 ---
 
-## Negative sampling
+### Negative sampling
 To avoid expensive full softmax, Word2Vec often uses **negative sampling**.
 
 Instead of predicting over the whole vocabulary, the model learns a simpler binary task:
@@ -161,24 +170,22 @@ Instead of predicting over the whole vocabulary, the model learns a simpler bina
 
 So instead of one huge softmax, the model solves a few small binary decisions with sigmoid.
 
-### Why it helps
+**Why it helps**
 - much faster
 - works very well in practice
 - avoids the full-vocabulary bottleneck
 
-### Good choice when
-Use skip-gram with negative sampling for efficient embedding learning on large corpora.
+- Use skip-gram with negative sampling for efficient embedding learning on large corpora.
 
 ---
 
-## Window size intuition
+### Window size intuition
 The context window controls what kind of similarity is learned.
 
 - **small window** → more local/syntactic similarity
 - **large window** → broader semantic/topic relatedness
 
-### Good choice when
-Use a small window for local substitution-like behavior, and a larger window for broader relatedness.
+- Use a small window for local substitution-like behavior, and a larger window for broader relatedness.
 
 ---
 
