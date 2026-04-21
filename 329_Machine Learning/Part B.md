@@ -118,6 +118,8 @@ where
 
 ## CBOW and Skip-gram
 
+Word2vec has two main versions:
+
 ### CBOW
 CBOW(Continuous Bag of Words) predicts the center word from surrounding context words.
 - Use CBOW when training speed matters and you want a strong practical baseline.
