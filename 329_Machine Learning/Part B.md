@@ -98,12 +98,21 @@ Word2Vec learns word vectors from context.
 
 Core idea:
 
-> words appearing in similar contexts should get similar vectors
+> words appearing in similar contexts should get similar vectors.
+
+> Use Word2Vec when you want efficient static word vectors from large unlabeled text.
 
 If an unknown word appears in contexts related to drinking, bottles, or being strong, the model can infer something about its meaning from usage alone.
 
-### Good choice when
-Use Word2Vec when you want efficient static word vectors from large unlabeled text.
+- embedding matrix: `W ∈ R^(∣V∣×M)` 
+- context matrix: `W′∈ R^(M×∣V∣)`
+
+where 
+> ∣V∣ = vocabulary size
+
+> M = embedding dimension
+
+
 
 ---
 
@@ -122,6 +131,8 @@ Example:
 - nearby targets: `cup`, `of`, `is`, `on`
 
 Flow:
+
+
 w_t
 (center word)
    →   x (one-hot, |V|×1)
