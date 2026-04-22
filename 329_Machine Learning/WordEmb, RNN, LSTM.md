@@ -169,6 +169,8 @@ When the correct target word is known, the predicted probability distribution is
 
 If the correct word gets high probability, loss becomes low.
 
+The formula: $L= \sum{-y\_i log\(p\_i\)}$
+
 - Use cross-entropy when one correct class should be selected from many vocabulary options.
 
 ---
@@ -410,7 +412,7 @@ At time step \(t\), a vanilla RNN uses:
 These are concatenated, multiplied by a weight matrix, then passed through a nonlinearity to produce the next hidden state:
 
 $$
-h_t = \tanh\!\big(W [x_t ; h_{t-1}] + b\big)
+h_t = \tanh\big(W \[x_t ; h_{t-1}] + b\big)
 $$
 
 So \(h_t\) is the new summary of the past plus the current input.
@@ -438,7 +440,7 @@ This produces four vectors:
 A compact form is:
 
 $$
-[i_t, f_t, o_t, g_t] = W [x_t ; h_{t-1}] + b
+\[i_t, f_t, o_t, g_t] = W \[x_t ; h_{t-1}] + b
 $$
 
 Then nonlinearities are applied:
