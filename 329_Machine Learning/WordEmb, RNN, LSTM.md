@@ -243,6 +243,7 @@ In simple terms:
 - current token gives new information
 - previous hidden state carries past context
 - new hidden state mixes both
+- it is like using the same RNN cell repeatedly
 
 ---
 
@@ -255,6 +256,8 @@ This is important because:
 - every position is processed with the same rule
 
 Without parameter sharing, sequence models would become too large and inefficient.
+
+\[if we wanted to remember the previous context o.e long range dependencies, it would require far more context]
 
 ---
 
@@ -285,35 +288,76 @@ Use it when:
 
 ---
 
-## Backpropagation Through Time (BPTT)
-RNNs are trained by unrolling them across timesteps and backpropagating through the sequence. This is called **Backpropagation Through Time**.
-
-### Truncated BPTT
-For long sequences, we often backpropagate through shorter chunks instead of the whole sequence.
-
-### Good choice when
-Use truncated BPTT when full-sequence training is too costly.
-
----
-
 ## Main weakness of vanilla RNNs
 Vanilla RNNs struggle with long-range dependencies because gradients can:
 
 - **vanish**: become too small
 - **explode**: become too large
 
-### Practical control
-- exploding gradients → use **gradient clipping**
-- vanishing gradients → often change the architecture
+
+### Core idea
+In RNNs, gradients are multiplied across time steps:
+
+
+$$
+\frac{\partial L}{\partial h_k} =
+\frac{\partial L}{\partial h_t}
+\prod_{i=k+1}^{t}
+\frac{\partial h_i}{\partial h_{i-1}}
+$$
+
+Repeated multiplication causes instability.
+
+
+### Vanishing Gradient
+If terms < 1:
+
+$$
+\|\nabla\| \to 0
+$$
+
+**Effect:**
+- Early time steps get no learning signal  
+- Cannot learn long-term dependencies  
 
 ---
+
+### Exploding Gradient
+If terms > 1:
+
+$$
+\|\nabla\| \to \infty
+$$
+
+**Effect:**
+- Vanishing → forgets past  
+- Exploding → unstable training  
+- Huge updates  
+
+---
+
+### Intuition
+- $0.5^{10} \to 0$ → vanishing  
+- $2^{10} \to \infty$ → exploding  
+
+---
+
+### Fixes
+- **Exploding:** gradient clipping  
+- **Vanishing:** LSTM / GRU 
+
+
+---
+
 
 
 # RNN Training and Gradient Flow
 
 ## 1. Memory in BPTT
 
-During RNN training with Backpropagation Through Time (BPTT), you must store all hidden states $h_0, h_1, \ldots, h_T$ because the backward pass needs them. So memory grows as:
+RNNs are trained by unrolling them across timesteps and backpropagating through the sequence. This is called **Backpropagation Through Time**.
+
+During RNN training with BPTT, you must store all hidden states $h_0, h_1, \ldots, h_T$ because the backward pass needs them. So memory grows as:
 
 $$\text{Memory} \propto T$$
 
@@ -340,6 +384,8 @@ Instead of backpropagating through 1000 steps at once, we:
 - Less memory usage
 - More frequent weight updates
 - Faster convergence
+
+Use truncated BPTT when full-sequence training is too costly.
 
 ---
 
@@ -406,8 +452,8 @@ Use LSTM when vanilla RNN forgets important earlier context.
 ## Vanilla RNN
 At time step \(t\), a vanilla RNN uses:
 
-- current input vector \(x_t\)
-- previous hidden state \(h_{t-1}\)
+- current input vector $\(x_t\)$
+- previous hidden state $\(h_{t-1}\)$
 
 These are concatenated, multiplied by a weight matrix, then passed through a nonlinearity to produce the next hidden state:
 
@@ -415,7 +461,7 @@ $$
 h_t = \tanh\big(W \[x_t ; h_{t-1}] + b\big)
 $$
 
-So \(h_t\) is the new summary of the past plus the current input.
+So $\(h_t\)$ is the new summary of the past plus the current input.
 
 ### Limitation
 Because information must pass through repeated matrix multiplications across time, vanilla RNNs often struggle with long-term dependencies.
@@ -425,11 +471,11 @@ Because information must pass through repeated matrix multiplications across tim
 ## LSTM
 An LSTM uses:
 
-- current input \(x_t\)
-- previous hidden state \(h_{t-1}\)
-- previous cell state \(c_{t-1}\)
+- current input $\(x_t\)$
+- previous hidden state $\(h_{t-1}\)$
+- previous cell state $\(c_{t-1}\)$
 
-First, \(x_t\) and \(h_{t-1}\) are stacked and passed through one large linear layer.  
+First, $\(x_t\)$ and $\(h_{t-1}\)$ are stacked and passed through one large linear layer.  
 This produces four vectors:
 
 - input gate: \(i_t\)
@@ -463,7 +509,7 @@ $$
 c_t = f_t \odot c_{t-1} + i_t \odot g_t
 $$
 
-where \(\odot\) means elementwise multiplication.
+where $\(\odot\)$ means elementwise multiplication.
 
 Interpretation:
 
