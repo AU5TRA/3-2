@@ -273,7 +273,7 @@ Generate multiple reasoning paths for the same problem and choose the most commo
 - Usually not ideal for low-cost real-time systems
 
 ### Small example
-Suppose a tricky email might be phishing or harmless. Instead of trusting one answer, run the CoT prompt several times and take the majority label.
+> Suppose a tricky email might be phishing or harmless. Instead of trusting one answer, run the CoT prompt several times and take the majority label.
 
 ### Why choose it?
 Choose self-consistency when **accuracy matters more than cost**, and one reasoning trace may not be dependable.
@@ -349,7 +349,7 @@ Use an LLM to generate candidate prompts, evaluate them, and keep the best ones.
 - Not usually the answer for a one-off scenario question in an exam
 
 ### Small example
-Generate 10 alternative prompts for extracting invoice fields, test them on a validation set, and keep the best-performing version.
+> Generate 10 alternative prompts for extracting invoice fields, test them on a validation set, and keep the best-performing version.
 
 ### Why choose it?
 Choose APE only when the scenario is about **building or optimizing a prompting pipeline**, not just solving one task.
@@ -371,10 +371,14 @@ This is not one single technique, but a family of prompt use-cases for programmi
 - Rapid prototyping
 
 ### Small examples
-- Write code: “Write a Python script to rename all `.txt` files in a folder.”
-- Explain code: “Explain this recursion function line by line.”
-- Translate code: “Convert this Bash script into Python.”
-- Debug/review code: “Find the bug and suggest improvements.”
+> Write code: “Write a Python script to rename all `.txt` files in a folder.”
+
+> Explain code: “Explain this recursion function line by line.”
+
+> Translate code: “Convert this Bash script into Python.”
+
+> Debug/review code: “Find the bug and suggest improvements.”
+
 
 ### Why choose it?
 Choose code prompting when the task is clearly about **program generation, interpretation, conversion, or debugging**.
