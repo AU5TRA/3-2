@@ -1,0 +1,298 @@
+
+
+ML Notes:
+
+Slide 2:
+
+In regression target variable is continuous
+In classification target variable can take only small number of discrete values
+
+Hypothesis h with parameters theta for linear regression = ho(x) = O0 + O1x1 + O2x2...
+Loss function J(O) = 1/2 (ho(x) - y)^2
+For dataset with n samples J(O) = 1/2 sum_k((ho(x^k) - y^k)^2)
+
+solve X^TX O = X^T y to get optimal O*
+also called Normal equation = O* = (X^TX)^-1 X^T y
+
+In linear regression:
+if too many samples, matrix will be very big, loading full matrix into GPU would be difficult
+if too many features, system of linear equations to solve will become very compelx
+if non invertible, can not calculate O*
+if X and y are not linear then no matter what we do there will always be high error
+
+Slide 3:
+
+Batch gradient descent:
+use all n samples to compute gradient
+exact gradient
+stable updates
+slow and memory intensive
+
+minibatch gradient descent
+small batch
+reasonable stability
+most used
+
+stochastic gradient descent:
+use each sample to compute gradient
+noisy gradient
+very fast
+convergence issues
+
+Slide 4:
+Given a fnction x, we approximate y with a linear function
+But if we want to classify the classes?
+We map the linear function output to between 0 and 1 using sigmoid.
+Why sigmoid?
+It is bounded between 0 and 1.
+It is differentiable easily. g'(z) = g(z)(1-g(z)).
+Good for handling outliers
+** Do the derivation for logistic regression binary classification.
+
+Slide 5:
+** Do backprop calculation / formula derivation.
+
+Slide 6:
+Techniques:
+-Feature scaling: gradient value depends on feature value. if feature value is large, gradient is also large, model becomes more reliant
+we solve this using standardization x = x - u / sigma, alternatively using minmax scaling
+but min max scaling bad for data with outliers
+
+-Missing value imputation: replace missing data with mean, median, mode, etc
+or use ML based solutions like KNN imputer (k-nearest neighbours)
+
+-Data augmentation: used to impove dataset
+in the form of noise addition. transformations like rotating and scaling,
+and synthetic sample generating like resampling minority classes etc
+
+-Avoid standardization using full dataset, as it causes data leak,
+i get some information about validation and test set
+Solution: Standardize all sets using parameters from train set only.
+
+-Cross validation:
+See from slide
+
+Performance metrics:
+accuracy: proportion of exampels for which the model produces correct predictions
+
+Predicted positive and Originally positive True positive
+Predicted positive and Originally negative False positive
+Predicted negative and Originally positive False negative
+Predicted negative and Originally negative True negative
+
+This is a confusion matrix
+
+Accuracy = TP + TN / TP + TN + FP + FN
+often not enough
+
+need precision = TP / TP + FP
+need recall = TP / TP + FN
+F1 score = 2 Precision / Precition + Recall
+
+For multiclass
+accuracy = sum of diagonal / sum all
+Alternatively
+select class as positive and all other as negative, and calculate metrics class wise
+
+Learn micro macro and weighted averaging and ROC.
+
+Slide 7:
+Inductive bias: Decisions made like is it linear, fully connected NN, etc
+Feature extraction: we use convolution. as if we flatten images, we lose spatial structure
+and its related information
+Padding:
+Reduces dimensionality shrinkage
+Preserves border information, makes sure corner pixels are ran over more than once
+use 0 for padding so computation isnt affected
+
+Input size W
+Filter size K
+Padding P
+output size = W - K + 1 + 2P
+
+Convolution and translation can be interchanged in sequence
+
+**Check pooling and convolution
+
+Dropout:
+In each forward pass randomly set some neurons to zero
+this forces succeeding neurons to not rely on any single feature
+
+Batch normalization:
+Similar to standardization of input data in data preprocessing
+Except we do it between hidden layers
+it reduces effect of previous layers on succeeding layers
+**Can be done on both before and after activation.
+-For before activation functions, it is better for sigmoid or tanh where
+extreme values result in vanishing gradients.
+-For after activation functions, for example after ReLU, we are normalizing what data the next layer receives.
+So it will work like standard normalization
+
+May not always want between 0 and 1,
+z~ = Y (z - u) / s + B
+where Y and B are trainable
+
+also since we are normalizing z, in z = wx + b, we can remove b, as it gets compressed
+anyway, and succeeding bias is added by B
+
+It is possible to represent a larger kernel with a stack of smaller kernels.
+A 3x3 convolution on a space of 5x5, followed by another 3x3 convolution on the output region of 3x3 is equivalent
+to doing a 5x5 convolution on the original space of 5x5, assuming stride is 1.
+
+**Deep models have higher representation power, but the problem is that adding more layers,
+the consecutive multiplication of gradients back through the network results in either exploding or vanishing gradients.
+The solution was that some nodes were better off doing nothing. Which manifssted in the integration of
+skip connections H(x) = F(x) + x
+
+Transfer Learning: Instead of training the whole model again, use a pretrained model, and fine tune
+optionally freezing some layers
+
+Slide 8:
+Ensemble methods:
+Parallel - Bagging
+Sequential - Boosting
+
+Bagging (Bootstrap aggregate):
+Randomly draw Sj samples from S with replacement.
+Do it T times
+Train a predictor on each bootstrap
+Either average output or majority voting
+
+Slide 9:
+Bias: The test error even if we were to fit the model with an infinitely large
+training dataset.
+
+Variance: The amount of variations across models learnt on multiple different
+training datasets drawn from some underlying distribution
+
+**Very important to understand MSE, will be needed in other places
+
+Elin sir -------------
+
+Slide 9:
+
+Principal Component Analysis (PCA)
+The steps are:
+1. Mean-center the data (subtract the mean of each feature from every data point).
+This moves the data cloud to be centered at the origin.
+
+2. Compute the covariance matrix Σ from the centered data.
+
+3. Find the eigenvectors and eigenvalues of Σ.
+Each eigenvector defines a direction (a "principal component"), and each
+eigenvalue tells you how much variance is captured along that direction.
+
+4. Rank the eigenvectors by their eigenvalues, from largest to smallest.
+The eigenvector with the biggest eigenvalue points in the direction of greatest variance
+— this is Principal Component 1 (PC1). The eigenvector with the second largest eigenvalue
+is PC2, and so on.
+
+5. Choose how many components to keep (call it k, where k < p).
+You keep the top k eigenvectors — the k directions that capture the most variance.
+
+6. Project the data onto those k eigenvectors. Each original high-dimensional data point
+gets mapped to a new k-dimensional representation by computing its dot product with each
+of the k eigenvectors.
+
+Slide 13:
+
+Prompt Engineering:
+Sampling controls:
+Top p, Top k, temperature
+-Temperature: Controls the degree of randomness in token selection.
+0 is for greedy, and higher temp leads to higher random seletion
+-Top k: Sampling selects the top k most likely tokens from the model's predicted distribution
+-Top p: Sampling selects the top tokens whose cumilative probability doesnt exceed 
+
+Prompting Techniques:
+- General / zero shot:
+It only provides a description of a task and some text for LLM to start with.
+- One shot & few shot:
+Provides n examples to the model so that can imitate the example and follow the pattern it needs to.
+- System:
+Sets the overall context and purpose for the LLM.
+Defines its fundamental capabilities and purpose.
+- Contextual:
+Provides the specific details or background information relevant to the current task.
+- Role:
+Assigns a specific character or identity for the language model to adopt.
+Frames the model's output style and voice. It adds a layer of specificity and personality.
+- Step-back:
+Improves the performance of the LLM output by first making it answer a general question related to the specific task.
+This allows the LLM to allow relevant background knowledge and reasoning processes before attempting to solve the problem.
+- Chain of thought:
+Improves the performance of the LLM output by making it generate reasoning steps.
+This helps the LLM generate more accurate answers and self-verify if the output is wrong by looking at reasoning steps.
+Can be mixed with n-shot prompting.
+- Self consistency:
+Self consistency combines sampling and majority voting to generate diverse reasoning paths
+and select the most consistent answers.
+1. The LLM is provided with the same prompt multiple times. A high temp setting encourages divergence.
+2. Extract answer from each response.
+3. Select most common answer.
+- Tree of thoughts:
+It generalizes CoT as it allows to explore multiple different reasoning paths simultaneously.
+- Reason and Act (ReAct):
+ReAct enables LLMs to solve complex tasks with natural language reasoning combined with external tools.
+- Automatic:
+Prompt a model to generate more prompts.
+Evaluate them.
+Alter them.
+Repeat.
+
+Slide 14:
+RAG:
+
+LLMs store knowledge in their parameters learned from training data.
+But this parametric knowledge has serious limitation:
+- Knowledge cutoff: Training data has a fixed endpoint. ie trained in 2023, doesnt know about 2024
+- Hallucinations: Generate plausible sounding false information with high confidence when lacking knowledge.
+- No access to private data: Cant access a company's internal documents, db, or proprietary info.
+- Costly updates: Retraining LLM to incorporate new knowledge requires enormous computational resources.
+
+RAG solution:
+Instead of answering purely from what it remembers, it queries
+to an external knowledgebase at inference time. It retrieves
+relevant information and generates response grounded in the retrieved context.
+
+If query is too big it is chunked.
+
+Loading: Import documents from various sources
+Chunking: Break large documents into smaller pieces called chunks.
+**This significantly impacts retrieval quality.
+Embedding: Convert each chunk into a dense vector representation using an embedding model
+Storing: Save these vectors in a vector database optimized for similarity search
+
+The generator LLM receives the original query and retrieved context and
+uses those to produce the final response.
+
+**Use RAG when:
+
+Knowledge changes frequently
+You need factual accuracy with citations
+Working with proprietary data
+Budget is limited
+You need transparency
+
+**Consider fine tuning when:
+Need to change model behavior
+Domain specific reasoning is required
+Knowledge is stable
+Speed is critical
+
+Slide 16-17:
+GNN
+
+For GNN, to create embeddings we do a simple process.
+-First aggregate neighbors for N hops, (1 hop in the simplest case)
+Aggregation has to be indifferent to number nodes or order, so it is usually an
+aggregate function like sum, max, mean, etc
+-Then update current node's embedding based on this aggregation.
+Aggregation is passed through weights W_k and update is passed through weights B_k
+** All nodes share the same update and aggregate weights.
+
+CNN is a special case of GNN where the neighbors are the neighboring pixels.
+Transformers are GNNs where the graph is fully connected with positional encoding.
+
+** Everything a GNN is you are retarded enough
+maybe YOU are a GNN
